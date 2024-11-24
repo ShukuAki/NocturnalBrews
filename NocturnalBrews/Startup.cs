@@ -20,8 +20,8 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        //services.AddDbContext<InternshipDbContext>(options =>
-        //options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+        services.AddDbContext<NocturnalBrewsContext>(options =>
+        options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
         
         // Add authentication and configure cookie settings
