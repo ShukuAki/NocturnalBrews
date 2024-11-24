@@ -12,6 +12,4 @@ public partial class ProductsTb
     public string Size { get; set; } = null!;
 
     public string Price { get; set; } = null!;
-
-    public virtual ICollection<OrdersTb> OrdersTbs { get; set; } = new List<OrdersTb>();
 }

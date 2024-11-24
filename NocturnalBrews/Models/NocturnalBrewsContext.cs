@@ -34,11 +34,8 @@ public partial class NocturnalBrewsContext : DbContext
             entity.Property(e => e.Mop)
                 .HasMaxLength(50)
                 .IsUnicode(false);
-
-            entity.HasOne(d => d.Product).WithMany(p => p.OrdersTbs)
-                .HasForeignKey(d => d.ProductId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_OrderTb_ProductId");
+            entity.Property(e => e.OrderDateTime).HasColumnType("datetime");
+            entity.Property(e => e.Total).HasColumnType("decimal(18, 2)");
         });
 
         modelBuilder.Entity<ProductsTb>(entity =>
