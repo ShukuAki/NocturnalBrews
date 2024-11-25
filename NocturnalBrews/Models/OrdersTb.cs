@@ -18,4 +18,6 @@ public partial class OrdersTb
     public decimal? Total { get; set; }
 
     public DateTime? OrderDateTime { get; set; }
+
+    public string Status { get; set; } = null!;
 }

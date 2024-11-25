@@ -35,6 +35,9 @@ public partial class NocturnalBrewsContext : DbContext
                 .HasMaxLength(50)
                 .IsUnicode(false);
             entity.Property(e => e.OrderDateTime).HasColumnType("datetime");
+            entity.Property(e => e.Status)
+                .HasMaxLength(50)
+                .HasDefaultValue("Pending");
             entity.Property(e => e.Total).HasColumnType("decimal(18, 2)");
         });
 

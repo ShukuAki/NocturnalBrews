@@ -25,6 +25,8 @@
     <link rel="stylesheet" href="~/plugins/daterangepicker/daterangepicker.css">
     <!-- summernote -->
     <link rel="stylesheet" href="~/plugins/summernote/summernote-bs4.min.css">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
     <div class="wrapper">
@@ -128,47 +130,131 @@
             
            
 
-<div class="container mt-4">
-    <h2>Product Maintenance</h2>
-    
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Product Name</th>
-                    <th>Category</th>
-                    <th>Sizes and Prices</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var product in Model)
-                {
-                    <tr>
-                        <td>@product.ProductName</td>
-                        <td>@product.Categories</td>
-                        <td>
-                            <ul class="list-unstyled">
-                               @*  @foreach (var price in product.Price)
-                                {
-                                    <li>@price: ₱@price</li>
-                                } *@
-                            </ul>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" onclick="editProduct('@product.ProductName')">Edit</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteProduct('@product.ProductName')">Delete</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
 
-    <div class="mt-3">
-        <button class="btn btn-success" onclick="addNewProduct()">Add New Product</button>
+            <div class="container mt-4">
+                <h2>Product Maintenance</h2>
+    
+                <!-- Add New Product Button -->
+                <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    Add New Product
+                </button>
+
+                <!-- Products Table -->
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Small Price</th>
+                            <th>Medium Price</th>
+                            <th>Large Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in Model)
+                        {
+                            <tr>
+                                <td>@product.ProductName</td>
+                                <td>@(product.Small?.ToString() ?? "N/A")</td>
+                                <td>@(product.Medium?.ToString() ?? "N/A")</td>
+                                <td>@(product.Large?.ToString() ?? "N/A")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning edit-product" 
+                                            data-id="@product.ProductId"
+                                            data-name="@product.ProductName"
+                                            data-small="@product.Small"
+                                            data-medium="@product.Medium"
+                                            data-large="@product.Large"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editProductModal">
+                                        Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-product" 
+                                            data-id="@product.ProductId"
+                                            data-name="@product.ProductName">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addProductForm">
+                    <div class="mb-3">
+                        <label class="form-label">Product Name</label>
+                        <input type="text" class="form-control" name="productName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Small Price</label>
+                        <input type="number" class="form-control" name="small">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Medium Price</label>
+                        <input type="number" class="form-control" name="medium">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Large Price</label>
+                        <input type="number" class="form-control" name="large">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveNewProduct">Save Product</button>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Edit Product Modal -->
+<div class="modal fade" id="editProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editProductForm">
+                    <input type="hidden" name="productId">
+                    <div class="mb-3">
+                        <label class="form-label">Product Name</label>
+                        <input type="text" class="form-control" name="productName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Small Price</label>
+                        <input type="number" class="form-control" name="small">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Medium Price</label>
+                        <input type="number" class="form-control" name="medium">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Large Price</label>
+                        <input type="number" class="form-control" name="large">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="updateProduct">Update Product</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
             
         </div>
@@ -199,6 +285,8 @@
     </script>
     <!-- Bootstrap 4 -->
     <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- ChartJS -->
     <script src="~/plugins/chart.js/Chart.min.js"></script>
 
@@ -218,22 +306,83 @@
 
 
     <script>
-        function editProduct(productName) {
-            // TODO: Implement edit functionality
-            console.log('Edit product:', productName);
-        }
+        $(document).ready(function() {
+            // Handle Edit Button Click
+            $('.edit-product').click(function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                const small = $(this).data('small');
+                const medium = $(this).data('medium');
+                const large = $(this).data('large');
 
-        function deleteProduct(productName) {
-            // TODO: Implement delete functionality
-            if (confirm('Are you sure you want to delete ' + productName + '?')) {
-                console.log('Delete product:', productName);
-            }
-        }
+                $('#editProductForm input[name="productId"]').val(id);
+                $('#editProductForm input[name="productName"]').val(name);
+                $('#editProductForm input[name="small"]').val(small);
+                $('#editProductForm input[name="medium"]').val(medium);
+                $('#editProductForm input[name="large"]').val(large);
+                
+                // Manually show the modal
+                var editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+                editModal.show();
+            });
 
-        function addNewProduct() {
-            // TODO: Implement add functionality
-            console.log('Add new product');
-        }
+            // Handle Delete Button Click
+            $('.delete-product').click(function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                
+                if (confirm(`Are you sure you want to delete ${name}?`)) {
+                    $.ajax({
+                        url: '/Home/DeleteProduct',
+                        type: 'POST',
+                        data: { id: id },
+                        success: function(result) {
+                            if (result.success) {
+                                location.reload();
+                            } else {
+                                alert('Error deleting product');
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Handle Add New Product
+            $('#saveNewProduct').click(function() {
+                const formData = $('#addProductForm').serialize();
+                
+                $.ajax({
+                    url: '/Home/AddProduct',
+                    type: 'POST',
+                    data: formData,
+                    success: function(result) {
+                        if (result.success) {
+                            location.reload();
+                        } else {
+                            alert('Error adding product');
+                        }
+                    }
+                });
+            });
+
+            // Handle Update Product
+            $('#updateProduct').click(function() {
+                const formData = $('#editProductForm').serialize();
+                
+                $.ajax({
+                    url: '/Home/UpdateProduct',
+                    type: 'POST',
+                    data: formData,
+                    success: function(result) {
+                        if (result.success) {
+                            location.reload();
+                        } else {
+                            alert('Error updating product');
+                        }
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>

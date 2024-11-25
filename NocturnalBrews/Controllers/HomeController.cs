@@ -158,6 +158,71 @@ namespace NocturnalBrews.Controllers
             }
         }
 
+        public IActionResult Maintenance()
+    {
+        var products = _context.ProductsTbs.ToList();
+        return View(products);  // Pass the products to the view
+    }
+
+    [HttpPost]
+    public IActionResult AddProduct(ProductsTb product)
+    {
+        try
+        {
+            _context.ProductsTbs.Add(product);
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+        catch (Exception)
+        {
+            return Json(new { success = false });
+        }
+    }
+
+    [HttpPost]
+    public IActionResult UpdateProduct(ProductsTb product)
+    {
+        try
+        {
+            var existingProduct = _context.ProductsTbs.Find(product.ProductId);
+            if (existingProduct == null)
+                return Json(new { success = false });
+
+            existingProduct.ProductName = product.ProductName;
+            existingProduct.Small = product.Small;
+            existingProduct.Medium = product.Medium;
+            existingProduct.Large = product.Large;
+
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+        catch (Exception)
+        {
+            return Json(new { success = false });
+        }
+    }
+
+    [HttpPost]
+    public IActionResult DeleteProduct(int id)
+    {
+        try
+        {
+            var product = _context.ProductsTbs.Find(id);
+            if (product == null)
+                return Json(new { success = false });
+
+            _context.ProductsTbs.Remove(product);
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+        catch (Exception)
+        {
+            return Json(new { success = false });
+        }
+    }
+
+
+
         //Generated Functions
         public IActionResult Privacy()
         {
