@@ -9,7 +9,11 @@ public partial class ProductsTb
 
     public string ProductName { get; set; } = null!;
 
-    public string Size { get; set; } = null!;
+    public string? Categories { get; set; }
 
-    public string Price { get; set; } = null!;
+    public int? Small { get; set; }
+
+    public int? Medium { get; set; }
+
+    public int? Large { get; set; }
 }

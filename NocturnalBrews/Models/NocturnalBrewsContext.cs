@@ -44,13 +44,8 @@ public partial class NocturnalBrewsContext : DbContext
 
             entity.ToTable("ProductsTb");
 
-            entity.Property(e => e.Price)
-                .HasMaxLength(50)
-                .IsUnicode(false);
+            entity.Property(e => e.Categories).HasMaxLength(100);
             entity.Property(e => e.ProductName)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.Size)
                 .HasMaxLength(50)
                 .IsUnicode(false);
         });

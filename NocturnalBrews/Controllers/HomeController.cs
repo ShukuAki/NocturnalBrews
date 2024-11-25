@@ -20,10 +20,7 @@ namespace NocturnalBrews.Controllers
         public IActionResult Index()
         {
             // Existing code for products
-            var products = _context.ProductsTbs
-                .GroupBy(p => p.ProductName)
-                .Select(g => g.First())
-                .ToList();
+            var products = _context.ProductsTbs.ToList();
 
             // Get orders and process them in memory
             var orders = _context.OrdersTbs
@@ -81,32 +78,56 @@ namespace NocturnalBrews.Controllers
         }
 
 
-        // GET: Products/GetSizes
         [HttpGet]
         public JsonResult GetSizes(string productName)
         {
-            var sizes = _context.ProductsTbs
+            var product = _context.ProductsTbs
                 .Where(p => p.ProductName == productName)
-                .Select(p => new { p.Size, p.Price })
-                .ToList();
+                .Select(p => new { 
+                    Small = p.Small,
+                    Medium = p.Medium, 
+                    Large = p.Large
+                })
+                .FirstOrDefault();
+
+            if (product == null)
+                return Json(new object[] {});
+
+            var sizes = new List<object>();
+            if (product.Small.HasValue) sizes.Add(new { size = "Small", price = product.Small.Value });
+            if (product.Medium.HasValue) sizes.Add(new { size = "Medium", price = product.Medium.Value });
+            if (product.Large.HasValue) sizes.Add(new { size = "Large", price = product.Large.Value });
 
             return Json(sizes);
         }
-
-
 
         [HttpGet]
         public async Task<IActionResult> GetPrice(string productName, string size)
         {
             var product = await _context.ProductsTbs
-                .Where(p => p.ProductName == productName && p.Size == size)
-                .Select(p => new { price = p.Price })  // Price is now returned as int
+                .Where(p => p.ProductName == productName)
+                .Select(p => new { 
+                    Small = p.Small,
+                    Medium = p.Medium,
+                    Large = p.Large
+                })
                 .FirstOrDefaultAsync();
 
             if (product == null)
                 return NotFound();
 
-            return Json(product);
+            int? price = size.ToLower() switch
+            {
+                "small" => product.Small,
+                "medium" => product.Medium, 
+                "large" => product.Large,
+                _ => null
+            };
+
+            if (!price.HasValue)
+                return NotFound();
+
+            return Json(new { price = price.Value });
         }
 
         [HttpPost]
