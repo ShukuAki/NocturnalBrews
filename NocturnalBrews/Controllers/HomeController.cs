@@ -129,7 +129,6 @@ namespace NocturnalBrews.Controllers
 
             return Json(new { price = price.Value });
         }
-
         [HttpPost]
         public IActionResult SubmitTransaction([FromBody] TransactionViewModel transaction)
         {
@@ -143,7 +142,8 @@ namespace NocturnalBrews.Controllers
                     Change = (int)Math.Round(transaction.Change), // Convert decimal to int
                     ProductsArray = System.Text.Json.JsonSerializer.Serialize(transaction.Products),
                     Total = (int)Math.Round(transaction.TotalAmount), // Convert decimal to int
-                    OrderDateTime = DateTime.Now
+                    OrderDateTime = DateTime.Now,
+                    Status = "Pending"
                 };
 
                 _context.OrdersTbs.Add(order);
@@ -158,70 +158,103 @@ namespace NocturnalBrews.Controllers
             }
         }
 
-        public IActionResult Maintenance()
-    {
-        var products = _context.ProductsTbs.ToList();
-        return View(products);  // Pass the products to the view
-    }
-
-    [HttpPost]
-    public IActionResult AddProduct(ProductsTb product)
-    {
-        try
+            public IActionResult Maintenance()
         {
-            _context.ProductsTbs.Add(product);
-            _context.SaveChanges();
-            return Json(new { success = true });
+            var products = _context.ProductsTbs.ToList();
+            return View(products);  // Pass the products to the view
         }
-        catch (Exception)
-        {
-            return Json(new { success = false });
-        }
-    }
 
-    [HttpPost]
-    public IActionResult UpdateProduct(ProductsTb product)
-    {
-        try
+        [HttpPost]
+        public IActionResult AddProduct(ProductsTb product)
         {
-            var existingProduct = _context.ProductsTbs.Find(product.ProductId);
-            if (existingProduct == null)
+            try
+            {
+                _context.ProductsTbs.Add(product);
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch (Exception)
+            {
                 return Json(new { success = false });
-
-            existingProduct.ProductName = product.ProductName;
-            existingProduct.Small = product.Small;
-            existingProduct.Medium = product.Medium;
-            existingProduct.Large = product.Large;
-
-            _context.SaveChanges();
-            return Json(new { success = true });
+            }
         }
-        catch (Exception)
-        {
-            return Json(new { success = false });
-        }
-    }
 
-    [HttpPost]
-    public IActionResult DeleteProduct(int id)
-    {
-        try
+        [HttpPost]
+        public IActionResult UpdateProduct(ProductsTb product)
         {
-            var product = _context.ProductsTbs.Find(id);
-            if (product == null)
+            try
+            {
+                var existingProduct = _context.ProductsTbs.Find(product.ProductId);
+                if (existingProduct == null)
+                    return Json(new { success = false });
+
+                existingProduct.ProductName = product.ProductName;
+                existingProduct.Small = product.Small;
+                existingProduct.Medium = product.Medium;
+                existingProduct.Large = product.Large;
+
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch (Exception)
+            {
                 return Json(new { success = false });
-
-            _context.ProductsTbs.Remove(product);
-            _context.SaveChanges();
-            return Json(new { success = true });
+            }
         }
-        catch (Exception)
+
+        [HttpPost]
+        public IActionResult DeleteProduct(int id)
         {
-            return Json(new { success = false });
+            try
+            {
+                var product = _context.ProductsTbs.Find(id);
+                if (product == null)
+                    return Json(new { success = false });
+
+                _context.ProductsTbs.Remove(product);
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch (Exception)
+            {
+                return Json(new { success = false });
+            }
         }
-    }
 
 
+        //pending orders
+        public IActionResult PendingOrder()
+        {
+            var pendingOrders = _context.OrdersTbs
+                .Where(o => o.Status == "Pending")
+                .OrderByDescending(o => o.OrderDateTime)
+                .ToList();
+
+            return View(pendingOrders);
+        }
+
+        // POST: Home/UpdateOrderStatus
+        [HttpPost]
+        public IActionResult UpdateOrderStatus(int orderId, string status)
+        {
+            try
+            {
+                var order = _context.OrdersTbs.Find(orderId);
+                if (order == null)
+                {
+                    return Json(new { success = false, message = "Order not found" });
+                }
+
+                order.Status = status;
+                _context.SaveChanges();
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
 
         //Generated Functions
         public IActionResult Privacy()

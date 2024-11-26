@@ -114,6 +114,12 @@
                                         <p>Maintenance</p>
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a href="@Url.Action("PendingOrder", "Home")" class="nav-link ">
+                                        <i class="far fa-circle nav-icon" id="index-icon"></i>
+                                        <p>Pending Orders</p>
+                                    </a>
+                                </li>
                             </ul>
                         </li>
                     </ul>
@@ -125,8 +131,80 @@
 
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
+            <!-- Coffee Section -->
+            <div class="content-header">
+                <div class="container-fluid">
+                    <h2 class="text-center mb-4">Our Premium Coffee Selection</h2>
+                </div>
+            </div>
             <div class="row">
-                @foreach (var product in Model)
+                @foreach (var product in Model.Where(p => p.Categories == "Coffee"))
+                {
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">@product.ProductName</h5>
+                                <p class="card-text">Price: <span id="price-@product.ProductName.Replace(" ", "-")">Select size first</span></p>
+                                <select class="form-control mb-2" id="sizeSelect-@product.ProductName.Replace(" ", "-")" 
+                                        onchange="updatePrice('@product.ProductName', @product.Small, @product.Medium, @product.Large)">
+                                    <option value="">Choose size...</option>
+                                    <option value="Small">Small</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Large">Large</option>
+                                </select>
+                                <button class="btn btn-success" onclick="addToCart('@product.ProductName', @product.Small, @product.Medium, @product.Large)">
+                                    Add to Cart
+                                </button>
+                                <div class="alert alert-success mt-2" id="confirmation-@product.ProductName.Replace(" ", "-")" style="display:none;">
+                                    Added to cart successfully!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Matcha Section -->
+            <div class="content-header">
+                <div class="container-fluid">
+                    <h2 class="text-center mb-4">Authentic Japanese Matcha</h2>
+                </div>
+            </div>
+            <div class="row">
+                @foreach (var product in Model.Where(p => p.Categories == "Matcha"))
+                {
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">@product.ProductName</h5>
+                                <p class="card-text">Price: <span id="price-@product.ProductName.Replace(" ", "-")">Select size first</span></p>
+                                <select class="form-control mb-2" id="sizeSelect-@product.ProductName.Replace(" ", "-")" 
+                                        onchange="updatePrice('@product.ProductName', @product.Small, @product.Medium, @product.Large)">
+                                    <option value="">Choose size...</option>
+                                    <option value="Small">Small</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Large">Large</option>
+                                </select>
+                                <button class="btn btn-success" onclick="addToCart('@product.ProductName', @product.Small, @product.Medium, @product.Large)">
+                                    Add to Cart
+                                </button>
+                                <div class="alert alert-success mt-2" id="confirmation-@product.ProductName.Replace(" ", "-")" style="display:none;">
+                                    Added to cart successfully!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Yogurt Section -->
+            <div class="content-header">
+                <div class="container-fluid">
+                    <h2 class="text-center mb-4">Fresh & Creamy Yogurt Drinks</h2>
+                </div>
+            </div>
+            <div class="row">
+                @foreach (var product in Model.Where(p => p.Categories == "Yogurt"))
                 {
                     <div class="col-md-4 mb-4">
                         <div class="card">
@@ -213,8 +291,6 @@
             </div>
         </div>
     </div>
-
-
 
     <!-- Best Sellers Section -->
 <div class="content-wrapper">
