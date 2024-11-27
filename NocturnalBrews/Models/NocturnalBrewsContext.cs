@@ -15,6 +15,8 @@ public partial class NocturnalBrewsContext : DbContext
     {
     }
 
+    public virtual DbSet<Addon> Addons { get; set; }
+
     public virtual DbSet<OrdersTb> OrdersTbs { get; set; }
 
     public virtual DbSet<ProductsTb> ProductsTbs { get; set; }
@@ -25,6 +27,15 @@ public partial class NocturnalBrewsContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Addon>(entity =>
+        {
+            entity.HasKey(e => e.AddonId).HasName("PK__Addons__742895338D0391F8");
+
+            entity.Property(e => e.AddonName)
+                .HasMaxLength(30)
+                .IsUnicode(false);
+        });
+
         modelBuilder.Entity<OrdersTb>(entity =>
         {
             entity.HasKey(e => e.OrderId).HasName("PK__OrdersTb__C3905BCF9C13DDB1");

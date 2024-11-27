@@ -121,7 +121,12 @@
                                         <p>Pending Orders</p>
                                     </a>
                                 </li>
-                                
+                                <li class="nav-item">
+                                    <a href="@Url.Action("OrdersDone", "Home")" class="nav-link ">
+                                        <i class="far fa-circle nav-icon" id="index-icon"></i>
+                                        <p>Orders Done</p>
+                                    </a>
+                                </li>
                             </ul>
                         </li>
                     </ul>
@@ -168,6 +173,7 @@
                                             data-small="@product.Small"
                                             data-medium="@product.Medium"
                                             data-large="@product.Large"
+                                            data-category="@product.Categories"
                                             data-bs-toggle="modal" 
                                             data-bs-target="#editProductModal">
                                         Edit
@@ -196,19 +202,28 @@
                 <form id="addProductForm">
                     <div class="mb-3">
                         <label class="form-label">Product Name</label>
-                        <input type="text" class="form-control" name="productName" required>
+                        <input type="text" class="form-control" name="ProductName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <select class="form-control" name="Categories" required>
+                            <option value="">Select Category...</option>
+                            <option value="Coffee">Coffee</option>
+                            <option value="Matcha">Matcha</option>
+                            <option value="Yogurt">Yogurt</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Small Price</label>
-                        <input type="number" class="form-control" name="small">
+                        <input type="number" class="form-control" name="Small">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Medium Price</label>
-                        <input type="number" class="form-control" name="medium">
+                        <input type="number" class="form-control" name="Medium">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Large Price</label>
-                        <input type="number" class="form-control" name="large">
+                        <input type="number" class="form-control" name="Large">
                     </div>
                 </form>
             </div>
@@ -230,22 +245,31 @@
             </div>
             <div class="modal-body">
                 <form id="editProductForm">
-                    <input type="hidden" name="productId">
+                    <input type="hidden" name="ProductId">
                     <div class="mb-3">
                         <label class="form-label">Product Name</label>
-                        <input type="text" class="form-control" name="productName" required>
+                        <input type="text" class="form-control" name="ProductName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <select class="form-control" name="Categories" required>
+                            <option value="">Select Category...</option>
+                            <option value="Coffee">Coffee</option>
+                            <option value="Matcha">Matcha</option>
+                            <option value="Yogurt">Yogurt</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Small Price</label>
-                        <input type="number" class="form-control" name="small">
+                        <input type="number" class="form-control" name="Small">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Medium Price</label>
-                        <input type="number" class="form-control" name="medium">
+                        <input type="number" class="form-control" name="Medium">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Large Price</label>
-                        <input type="number" class="form-control" name="large">
+                        <input type="number" class="form-control" name="Large">
                     </div>
                 </form>
             </div>
@@ -257,6 +281,103 @@
     </div>
 </div>
 
+<!-- Add Addon Modal -->
+<div class="modal fade" id="addAddonModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Addon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addAddonForm">
+                    <div class="mb-3">
+                        <label class="form-label">Addon Name</label>
+                        <input type="text" class="form-control" name="AddonName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price</label>
+                        <input type="number" class="form-control" name="AddonPrice" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveAddon">Save Addon</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Addon Modal -->
+<div class="modal fade" id="editAddonModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Addon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editAddonForm">
+                    <input type="hidden" name="AddonId">
+                    <div class="mb-3">
+                        <label class="form-label">Addon Name</label>
+                        <input type="text" class="form-control" name="AddonName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price</label>
+                        <input type="number" class="form-control" name="AddonPrice" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="updateAddon">Update Addon</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <h2>Addon Maintenance</h2>
+
+    <!-- Add New Addon Button -->
+    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addAddonModal">
+        Add New Addon
+    </button>
+
+    <!-- Addons Table -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Addon Name</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var addon in ViewBag.Addons ?? new List<dynamic>())
+            {
+                <tr>
+                    <td>@addon.AddonName</td>
+                    <td>@addon.AddonPrice</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning edit-addon" 
+                                data-id="@addon.AddonId"
+                                data-name="@addon.AddonName"
+                                data-price="@addon.AddonPrice">
+                            Edit
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-addon" 
+                                data-id="@addon.AddonId">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
 
 
             
@@ -317,12 +438,16 @@
                 const small = $(this).data('small');
                 const medium = $(this).data('medium');
                 const large = $(this).data('large');
+                const category = $(this).data('category');
 
-                $('#editProductForm input[name="productId"]').val(id);
-                $('#editProductForm input[name="productName"]').val(name);
-                $('#editProductForm input[name="small"]').val(small);
-                $('#editProductForm input[name="medium"]').val(medium);
-                $('#editProductForm input[name="large"]').val(large);
+                console.log("Category value:", category); // Add this line for debugging
+
+                $('#editProductForm input[name="ProductId"]').val(id);
+                $('#editProductForm input[name="ProductName"]').val(name);
+                $('#editProductForm input[name="Small"]').val(small);
+                $('#editProductForm input[name="Medium"]').val(medium);
+                $('#editProductForm input[name="Large"]').val(large);   
+                $('#editProductForm select[name="Categories"]').val(category || '');
                 
                 // Manually show the modal
                 var editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
@@ -385,7 +510,85 @@
                     }
                 });
             });
+
+        // Add Addon
+        $('#saveAddon').click(function() {
+            var formData = {
+                AddonName: $('#addAddonForm [name="AddonName"]').val(),
+                AddonPrice: $('#addAddonForm [name="AddonPrice"]').val()
+            };
+
+            $.ajax({
+                url: '@Url.Action("AddAddon", "Home")',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    if(response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error adding addon');
+                    }
+                }
+            });
         });
+
+        // Edit Addon
+        $('.edit-addon').click(function() {
+            var id = $(this).data('id');
+            var name = $(this).data('name');
+            var price = $(this).data('price');
+
+            $('#editAddonForm [name="AddonId"]').val(id);
+            $('#editAddonForm [name="AddonName"]').val(name);
+            $('#editAddonForm [name="AddonPrice"]').val(price);
+
+            $('#editAddonModal').modal('show');
+        });
+
+        // Update Addon
+        $('#updateAddon').click(function() {
+            var formData = {
+                AddonId: $('#editAddonForm [name="AddonId"]').val(),
+                AddonName: $('#editAddonForm [name="AddonName"]').val(),
+                AddonPrice: $('#editAddonForm [name="AddonPrice"]').val()
+            };
+
+            $.ajax({
+                url: '@Url.Action("UpdateAddon", "Home")',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    if(response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error updating addon');
+                    }
+                }
+            });
+        });
+
+        // Delete Addon
+        $('.delete-addon').click(function() {
+            if(confirm('Are you sure you want to delete this addon?')) {
+                var id = $(this).data('id');
+                
+                $.ajax({
+                    url: '@Url.Action("DeleteAddon", "Home")',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function(response) {
+                        if(response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error deleting addon');
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+        
     </script>
 </body>
 </html>

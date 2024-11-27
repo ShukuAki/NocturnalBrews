@@ -116,18 +116,17 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="@Url.Action("PendingOrder", "Home")" class="nav-link active">
+                                    <a href="@Url.Action("PendingOrder", "Home")" class="nav-link ">
                                         <i class="far fa-circle nav-icon" id="index-icon"></i>
                                         <p>Pending Orders</p>
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="@Url.Action("OrdersDone", "Home")" class="nav-link ">
+                                    <a href="@Url.Action("OrdersDone", "Home")" class="nav-link active">
                                         <i class="far fa-circle nav-icon" id="index-icon"></i>
                                         <p>Orders Done</p>
                                     </a>
                                 </li>
-
                             </ul>
                         </li>
                     </ul>
@@ -146,6 +145,47 @@
                     <div class="row mb-2">
                         <div class="col-sm-6">
                             <h1 class="m-0">Pending Orders</h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Filter Section -->
+            <div class="container-fluid mb-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Date Filter:</label>
+                            <select id="dateFilter" class="form-control" onchange="filterOrders()">
+                                <option value="day">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="year">This Year</option>
+                                <option value="custom">Select Specific Date</option>
+                            </select>
+                        </div>
+                        <div id="customDateRange" style="display: none;">
+                            <div class="form-group">
+                                <label>Select Date:</label>
+                                <input type="date" id="selectedDate" class="form-control" onchange="filterOrders()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Summary Section -->
+            <div class="container-fluid mb-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Sales Summary</h3>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Total Sales:</strong> ₱<span id="totalSales">0</span></p>
+                                <p><strong>Most Ordered Product:</strong> <span id="mostOrderedProduct">-</span></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -172,9 +212,9 @@
                                         </thead>
                                         <tbody>
                                             @using Newtonsoft.Json;
-                                            @foreach (var order in Model.Where(o => o.Status == "Pending"))
+                                            @foreach (var order in Model.Where(o => o.Status == "Done"))
                                             {
-                                                <tr>
+                                                <tr class="order-row" data-order-date="@(order.OrderDateTime?.ToString("yyyy-MM-dd"))">
                                                     <td>@order.OrderId</td>
                                                     <td>
                                                         @{
@@ -201,17 +241,12 @@
                                                     </td>
                                                     <td>₱@order.Total</td>
                                                     <td>@order.Mop</td>
-                                                    <td>@order.OrderDateTime.ToString()</td>
+                                                    <td>@order.OrderDateTime?.ToString("MM/dd/yyyy hh:mm tt")</td>
                                                     <td>
                                                         <span class="badge badge-warning">@order.Status</span>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-primary btn-sm" onclick="updateStatus(@order.OrderId, 'Done')">
-                                                            <i class="fas fa-check"></i> Done
-                                                        </button>
-                                                        <button class="btn btn-danger btn-sm" onclick="updateStatus(@order.OrderId, 'Cancelled')">
-                                                            <i class="fas fa-times"></i> Cancel
-                                                        </button>
+                                                       
                                                     </td>
                                                 </tr>
                                             }
@@ -225,6 +260,166 @@
             </section>
 
             
+        <!-- Print Button -->
+        <button onclick="printToPDF()" class="btn btn-primary">
+            <i class="fas fa-print"></i> Print to PDF
+        </button>
+
+        <script>
+            function calculateSalesAndProducts() {
+                const rows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+                let totalSales = 0;
+                let productCounts = {};
+
+                rows.forEach(row => {
+                    // Calculate total sales
+                    const total = parseFloat(row.cells[2].textContent.replace('₱', ''));
+                    totalSales += total;
+
+                    // Count products
+                    const productsCell = row.cells[1];
+                    const productDivs = productsCell.querySelectorAll('div');
+                    productDivs.forEach(div => {
+                        const productText = div.textContent;
+                        const productName = productText.split('(')[0].trim();
+                        productCounts[productName] = (productCounts[productName] || 0) + 1;
+                    });
+                });
+
+                // Find most ordered product
+                let mostOrderedProduct = '';
+                let maxCount = 0;
+                for (let product in productCounts) {
+                    if (productCounts[product] > maxCount) {
+                        maxCount = productCounts[product];
+                        mostOrderedProduct = product;
+                    }
+                }
+
+                // Update the display
+                document.getElementById('totalSales').textContent = totalSales.toFixed(2);
+                document.getElementById('mostOrderedProduct').textContent = 
+                    mostOrderedProduct ? `${mostOrderedProduct} (${maxCount} orders)` : '-';
+            }
+
+            function printToPDF() {
+                // Store current body content
+                const originalContent = document.body.innerHTML;
+                
+                // Create print-specific content
+                let printContent = `
+                    <div style="padding: 20px;">
+                        <h2 style="text-align: center;">Completed Orders Report</h2>
+                        <div style="margin-bottom: 20px;">
+                            <p><strong>Total Sales:</strong> ₱${document.getElementById('totalSales').textContent}</p>
+                            <p><strong>Most Ordered Product:</strong> ${document.getElementById('mostOrderedProduct').textContent}</p>
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Order ID</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Products</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Total</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Payment Mode</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Order Date</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                // Get visible rows from the current table
+                const rows = document.querySelectorAll('tbody tr:not([style*="display: none"])');
+                rows.forEach(row => {
+                    printContent += `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.cells[0].textContent}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.cells[1].innerHTML}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.cells[2].textContent}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.cells[3].textContent}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.cells[4].textContent}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.cells[5].textContent}</td>
+                        </tr>`;
+                });
+
+                printContent += `
+                            </tbody>
+                        </table>
+                    </div>`;
+
+                // Replace body content with print content
+                document.body.innerHTML = printContent;
+
+                // Print
+                window.print();
+
+                // Restore original content
+                document.body.innerHTML = originalContent;
+
+                // Reattach event listeners
+                document.querySelector('button').onclick = printToPDF;
+                document.getElementById('dateFilter').onchange = filterOrders;
+                if(document.getElementById('selectedDate')) {
+                    document.getElementById('selectedDate').onchange = filterOrders;
+                }
+            }
+
+            function filterOrders() {
+                const filterType = document.getElementById('dateFilter').value;
+                const rows = document.querySelectorAll('.order-row');
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const customDateRange = document.getElementById('customDateRange');
+                customDateRange.style.display = filterType === 'custom' ? 'block' : 'none';
+
+                rows.forEach(row => {
+                    const orderDateStr = row.dataset.orderDate;
+                    if (!orderDateStr) {
+                        row.style.display = 'none';
+                        return;
+                    }
+
+                    const orderDate = new Date(orderDateStr);
+                    orderDate.setHours(0, 0, 0, 0);
+                    let show = false;
+
+                    switch(filterType) {
+                        case 'day':
+                            show = orderDate.toDateString() === today.toDateString();
+                            break;
+                        case 'week':
+                            const weekStart = new Date(today);
+                            weekStart.setDate(today.getDate() - today.getDay());
+                            show = orderDate >= weekStart && orderDate <= today;
+                            break;
+                        case 'month':
+                            show = orderDate.getMonth() === today.getMonth() && 
+                                  orderDate.getFullYear() === today.getFullYear();
+                            break;
+                        case 'year':
+                            show = orderDate.getFullYear() === today.getFullYear();
+                            break;
+                        case 'custom':
+                            const selectedDate = new Date(document.getElementById('selectedDate').value);
+                            selectedDate.setHours(0, 0, 0, 0);
+                            show = orderDate.toDateString() === selectedDate.toDateString();
+                            break;
+                    }
+
+                    row.style.display = show ? '' : 'none';
+                });
+
+                // Calculate sales and most ordered product after filtering
+                calculateSalesAndProducts();
+            }
+
+            // Initialize date filter and calculations on page load
+            document.addEventListener('DOMContentLoaded', () => {
+                filterOrders();
+                calculateSalesAndProducts();
+            });
+        </script>
+
 
         </div>
         <!--Content here jmpua-->
@@ -274,29 +469,6 @@
     <script src="~/dist/js/adminlte.js"></script>
 
 
-    <script>
-        function updateStatus(orderId, status) {
-            if (confirm('Are you sure you want to mark this order as ' + status + '?')) {
-                $.ajax({
-                    url: '@Url.Action("UpdateOrderStatus", "Home")',
-                    type: 'POST',
-                    data: {
-                        orderId: orderId,
-                        status: status
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Failed to update order status');
-                        }
-                    },
-                    error: function() {
-                        alert('An error occurred while updating the order');
-                    }
-                });
-            }
-        }
-    </script>
+    
 </body>
 </html>

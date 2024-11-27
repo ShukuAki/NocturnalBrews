@@ -4,6 +4,9 @@ using Newtonsoft.Json;
 using NocturnalBrews.Models;
 using System.Diagnostics;
 using JsonException = Newtonsoft.Json.JsonException;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using System.IO;
 
 namespace NocturnalBrews.Controllers
 {
@@ -21,6 +24,7 @@ namespace NocturnalBrews.Controllers
         {
             // Existing code for products
             var products = _context.ProductsTbs.ToList();
+            ViewBag.Addons = _context.Addons.ToList();
 
             // Get orders and process them in memory
             var orders = _context.OrdersTbs
@@ -161,7 +165,8 @@ namespace NocturnalBrews.Controllers
             public IActionResult Maintenance()
         {
             var products = _context.ProductsTbs.ToList();
-            return View(products);  // Pass the products to the view
+            ViewBag.Addons = _context.Addons.ToList();
+            return View(products);
         }
 
         [HttpPost]
@@ -173,7 +178,7 @@ namespace NocturnalBrews.Controllers
                 _context.SaveChanges();
                 return Json(new { success = true });
             }
-            catch (Exception)
+            catch
             {
                 return Json(new { success = false });
             }
@@ -185,10 +190,10 @@ namespace NocturnalBrews.Controllers
             try
             {
                 var existingProduct = _context.ProductsTbs.Find(product.ProductId);
-                if (existingProduct == null)
-                    return Json(new { success = false });
+                if (existingProduct == null) return Json(new { success = false });
 
                 existingProduct.ProductName = product.ProductName;
+                existingProduct.Categories = product.Categories;
                 existingProduct.Small = product.Small;
                 existingProduct.Medium = product.Medium;
                 existingProduct.Large = product.Large;
@@ -196,7 +201,7 @@ namespace NocturnalBrews.Controllers
                 _context.SaveChanges();
                 return Json(new { success = true });
             }
-            catch (Exception)
+            catch
             {
                 return Json(new { success = false });
             }
@@ -208,14 +213,66 @@ namespace NocturnalBrews.Controllers
             try
             {
                 var product = _context.ProductsTbs.Find(id);
-                if (product == null)
-                    return Json(new { success = false });
+                if (product == null) return Json(new { success = false });
 
                 _context.ProductsTbs.Remove(product);
                 _context.SaveChanges();
                 return Json(new { success = true });
             }
-            catch (Exception)
+            catch
+            {
+                return Json(new { success = false });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult AddAddon(Addon addon)
+        {
+            try
+            {
+                _context.Addons.Add(addon);
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch
+            {
+                return Json(new { success = false });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult UpdateAddon(Addon addon)
+        {
+            try
+            {
+                var existingAddon = _context.Addons.Find(addon.AddonId);
+                if (existingAddon == null) return Json(new { success = false });
+
+                existingAddon.AddonName = addon.AddonName;
+                existingAddon.AddonPrice = addon.AddonPrice;
+
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch
+            {
+                return Json(new { success = false });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult DeleteAddon(int id)
+        {
+            try
+            {
+                var addon = _context.Addons.Find(id);
+                if (addon == null) return Json(new { success = false });
+
+                _context.Addons.Remove(addon);
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch
             {
                 return Json(new { success = false });
             }
@@ -253,6 +310,86 @@ namespace NocturnalBrews.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        public IActionResult OrdersDone()
+        {
+            var orders = _context.OrdersTbs.Where(o => o.Status == "Done").ToList();
+            return View(orders);
+        }
+
+        [HttpPost]
+        public IActionResult GeneratePDF()
+        {
+            try
+            {
+                var orders = _context.OrdersTbs
+                    .Where(o => o.Status == "Done")
+                    .ToList();
+
+                // You'll need to install iTextSharp.LGPLv2.Core NuGet package
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    using (Document document = new Document(PageSize.A4, 25, 25, 30, 30))
+                    {
+                        PdfWriter writer = PdfWriter.GetInstance(document, ms);
+                        document.Open();
+
+                        // Add title
+                        var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 18);
+                        var title = new Paragraph("Completed Orders Report", titleFont)
+                        {
+                            Alignment = Element.ALIGN_CENTER,
+                            SpacingAfter = 20f
+                        };
+                        document.Add(title);
+
+                        // Create table
+                        PdfPTable table = new PdfPTable(6) { WidthPercentage = 100 };
+                        string[] headers = { "Order ID", "Products", "Total", "Payment Mode", "Order Date", "Status" };
+                        
+                        // Add headers
+                        foreach (string header in headers)
+                        {
+                            table.AddCell(new PdfPCell(new Phrase(header))
+                            {
+                                BackgroundColor = new BaseColor(240, 240, 240),
+                                Padding = 5
+                            });
+                        }
+
+                        // Add data
+                        foreach (var order in orders)
+                        {
+                            table.AddCell(order.OrderId.ToString());
+                            
+                            // Handle products array
+                            var products = JsonConvert.DeserializeObject<List<OrderItem>>(order.ProductsArray);
+                            var productCell = new PdfPCell();
+                            foreach (var item in products)
+                            {
+                                productCell.AddElement(new Phrase($"{item.ProductName} ({item.Size}) - ₱{item.Price}\n"));
+                            }
+                            table.AddCell(productCell);
+                            
+                            table.AddCell($"₱{order.Total}");
+                            table.AddCell(order.Mop);
+                            table.AddCell(order.OrderDateTime.ToString());
+                            table.AddCell(order.Status);
+                        }
+
+                        document.Add(table);
+                        document.Close();
+                    }
+
+                    return File(ms.ToArray(), "application/pdf", "CompletedOrders.pdf");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                return StatusCode(500, "Error generating PDF: " + ex.Message);
             }
         }
 
