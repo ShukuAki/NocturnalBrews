@@ -312,6 +312,7 @@ namespace NocturnalBrews.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+        
 
         public IActionResult OrdersDone()
         {
@@ -393,6 +394,104 @@ namespace NocturnalBrews.Controllers
             }
         }
 
+        public IActionResult Inventory()
+        {
+            var inventoryItems = _context.InventoryTbs.ToList();
+            var cups = _context.CupsListTbs.ToList();
+
+            var viewModel = new InventoryViewModel
+            {
+                InventoryItems = inventoryItems
+            };
+
+            ViewBag.Cups = cups;
+            return View(viewModel);
+        }
+
+        // Inventory Item Methods
+        [HttpGet]
+        public IActionResult GetInventoryItem(int id)
+        {
+            var item = _context.InventoryTbs.Find(id);
+            return Json(item);
+        }
+
+        [HttpPost]
+        public IActionResult AddInventoryItem(InventoryTb item)
+        {
+            _context.InventoryTbs.Add(item);
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        public IActionResult UpdateInventoryItem(InventoryTb item)
+        {
+            var existingItem = _context.InventoryTbs.Find(item.InventoryId);
+            if (existingItem == null) return NotFound();
+
+            existingItem.Ingredient = item.Ingredient;
+            existingItem.Quantity = item.Quantity;
+            existingItem.PricePer = item.PricePer;
+            existingItem.PriceWholeSale = item.PriceWholeSale;
+
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        public IActionResult DeleteInventoryItem(int id)
+        {
+            var item = _context.InventoryTbs.Find(id);
+            if (item == null) return NotFound();
+
+            _context.InventoryTbs.Remove(item);
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+
+        // Cup Methods
+        [HttpGet]
+        public IActionResult GetCup(int id)
+        {
+            var cup = _context.CupsListTbs.Find(id);
+            return Json(cup);
+        }
+
+        [HttpPost]
+        public IActionResult AddCup(CupsListTb cup)
+        {
+            _context.CupsListTbs.Add(cup);
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        public IActionResult UpdateCup(CupsListTb cup)
+        {
+            var existingCup = _context.CupsListTbs.Find(cup.CupId);
+            if (existingCup == null) return NotFound();
+
+            existingCup.Size = cup.Size;
+            existingCup.Quantity = cup.Quantity;
+            existingCup.PricePerCup = cup.PricePerCup;
+            existingCup.PriceWholeSale = cup.PriceWholeSale;
+
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+
+        [HttpPost]
+        public IActionResult DeleteCup(int id)
+        {
+            var cup = _context.CupsListTbs.Find(id);
+            if (cup == null) return NotFound();
+
+            _context.CupsListTbs.Remove(cup);
+            _context.SaveChanges();
+            return Json(new { success = true });
+        }
+
         //Generated Functions
         public IActionResult Privacy()
         {
@@ -403,6 +502,50 @@ namespace NocturnalBrews.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        [HttpPost]
+        public JsonResult UpdateCupInventory(int orderId)
+        {
+            try
+            {
+                // Get the order details
+                var order = _context.OrdersTbs.FirstOrDefault(o => o.OrderId == orderId);
+                if (order == null)
+                {
+                    return Json(new { success = false, message = "Order not found" });
+                }
+
+                // Deserialize the products array
+                var orderItems = JsonConvert.DeserializeObject<List<OrderItem>>(order.ProductsArray);
+                
+                // Process each ordered item
+                foreach (var item in orderItems)
+                {
+                    // Find the cup inventory record for this size
+                    var cupInventory = _context.CupsListTbs.FirstOrDefault(c => c.Size == item.Size);
+                    if (cupInventory != null)
+                    {
+                        // Reduce the cup quantity by 1
+                        cupInventory.Quantity -= 1;
+                        
+                        // Prevent negative inventory
+                        if (cupInventory.Quantity < 0)
+                        {
+                            cupInventory.Quantity = 0;
+                        }
+                    }
+                }
+
+                // Save changes to database
+                _context.SaveChanges();
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
     public class OrderItem

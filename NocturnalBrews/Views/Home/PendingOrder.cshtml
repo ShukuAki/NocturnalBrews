@@ -127,7 +127,12 @@
                                         <p>Orders Done</p>
                                     </a>
                                 </li>
-
+                                <li class="nav-item">
+                                    <a href="@Url.Action("Inventory", "Home")" class="nav-link ">
+                                        <i class="far fa-circle nav-icon" id="index-icon"></i>
+                                        <p>Inventory</p>
+                                    </a>
+                                </li>
                             </ul>
                         </li>
                     </ul>
@@ -275,6 +280,29 @@
 
 
     <script>
+        
+
+        function updateCupInventory(orderId) {
+            $.ajax({
+                url: '@Url.Action("UpdateCupInventory", "Home")',
+                type: 'POST',
+                data: {
+                    orderId: orderId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        console.log('Cup inventory updated successfully');
+                    } else {
+                        console.error('Failed to update cup inventory:', response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error updating cup inventory:', error);
+                }
+            });
+        }
+
+        // Modify existing updateStatus function to also update inventory when status is "Done"
         function updateStatus(orderId, status) {
             if (confirm('Are you sure you want to mark this order as ' + status + '?')) {
                 $.ajax({
@@ -286,6 +314,10 @@
                     },
                     success: function(response) {
                         if (response.success) {
+                            if (status === 'Done') {
+                                // Update cup inventory when order is marked as done
+                                updateCupInventory(orderId);
+                            }
                             location.reload();
                         } else {
                             alert('Failed to update order status');
@@ -297,6 +329,8 @@
                 });
             }
         }
+
+        
     </script>
 </body>
 </html>

@@ -17,6 +17,10 @@ public partial class NocturnalBrewsContext : DbContext
 
     public virtual DbSet<Addon> Addons { get; set; }
 
+    public virtual DbSet<CupsListTb> CupsListTbs { get; set; }
+
+    public virtual DbSet<InventoryTb> InventoryTbs { get; set; }
+
     public virtual DbSet<OrdersTb> OrdersTbs { get; set; }
 
     public virtual DbSet<ProductsTb> ProductsTbs { get; set; }
@@ -33,6 +37,28 @@ public partial class NocturnalBrewsContext : DbContext
 
             entity.Property(e => e.AddonName)
                 .HasMaxLength(30)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<CupsListTb>(entity =>
+        {
+            entity.HasKey(e => e.CupId).HasName("PK__CupsList__2C2806B499BAD368");
+
+            entity.ToTable("CupsListTb");
+
+            entity.Property(e => e.Size)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<InventoryTb>(entity =>
+        {
+            entity.HasKey(e => e.InventoryId).HasName("PK__Inventor__F5FDE6B337A80432");
+
+            entity.ToTable("InventoryTb");
+
+            entity.Property(e => e.Ingredient)
+                .HasMaxLength(150)
                 .IsUnicode(false);
         });
 
