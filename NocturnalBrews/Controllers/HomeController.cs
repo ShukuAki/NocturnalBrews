@@ -424,32 +424,6 @@ namespace NocturnalBrews.Controllers
             return Json(new { success = true });
         }
 
-        [HttpPost]
-        public IActionResult UpdateInventoryItem(InventoryTb item)
-        {
-            var existingItem = _context.InventoryTbs.Find(item.InventoryId);
-            if (existingItem == null) return NotFound();
-
-            existingItem.Ingredient = item.Ingredient;
-            existingItem.Quantity = item.Quantity;
-            existingItem.PricePer = item.PricePer;
-            existingItem.PriceWholeSale = item.PriceWholeSale;
-
-            _context.SaveChanges();
-            return Json(new { success = true });
-        }
-
-        [HttpPost]
-        public IActionResult DeleteInventoryItem(int id)
-        {
-            var item = _context.InventoryTbs.Find(id);
-            if (item == null) return NotFound();
-
-            _context.InventoryTbs.Remove(item);
-            _context.SaveChanges();
-            return Json(new { success = true });
-        }
-
         // Cup Methods
         [HttpGet]
         public IActionResult GetCup(int id)

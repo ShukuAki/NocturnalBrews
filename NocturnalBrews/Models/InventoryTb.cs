@@ -5,13 +5,15 @@ namespace NocturnalBrews.Models;
 
 public partial class InventoryTb
 {
-    public int InventoryId { get; set; }
+    public int InvId { get; set; }
 
     public string? Ingredient { get; set; }
 
-    public int? Quantity { get; set; }
+    public decimal? Quantity { get; set; }
 
-    public double? PricePer { get; set; }
+    public decimal? Remaining { get; set; }
 
-    public double? PriceWholeSale { get; set; }
+    public string? Measurement { get; set; }
+
+    public DateTime? Timestamp { get; set; }
 }
