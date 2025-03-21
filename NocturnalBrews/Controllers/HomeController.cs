@@ -88,7 +88,8 @@ namespace NocturnalBrews.Controllers
         {
             var product = _context.ProductsTbs
                 .Where(p => p.ProductName == productName)
-                .Select(p => new {
+                .Select(p => new
+                {
                     Small = p.Small,
                     Medium = p.Medium,
                     Large = p.Large
@@ -111,7 +112,8 @@ namespace NocturnalBrews.Controllers
         {
             var product = await _context.ProductsTbs
                 .Where(p => p.ProductName == productName)
-                .Select(p => new {
+                .Select(p => new
+                {
                     Small = p.Small,
                     Medium = p.Medium,
                     Large = p.Large
@@ -504,15 +506,64 @@ namespace NocturnalBrews.Controllers
             { "Blue-Berry Yogurt_Large", new Dictionary<string, decimal> { { "BlueBerry Jam", 6m }, { "Milk", 33m }, { "Yogurt Syrup", 0.6m } } }
         };
 
-        private Dictionary<string, decimal> GetInventory()
+        private Dictionary<string, Dictionary<DateTime, decimal>> GetDailyInventory()
         {
-            var inventory = new Dictionary<string, decimal>();
+            var dailyInventory = new Dictionary<string, Dictionary<DateTime, decimal>>();
             var inventoryItems = _context.InventoryTbs.ToList();
+
+            // Log starting inventory if not already logged for today
+            LogDailyInventory(inventoryItems);
+
             foreach (var item in inventoryItems)
             {
-                inventory[item.Name] = Math.Round((decimal)(item.Stock - item.Used), 2);
+                if (!dailyInventory.ContainsKey(item.Name))
+                {
+                    dailyInventory[item.Name] = new Dictionary<DateTime, decimal>();
+                }
+                dailyInventory[item.Name][DateTime.Today] = Math.Round((decimal)(item.Stock - item.Used), 2);
             }
-            return inventory;
+            return dailyInventory;
+        }
+
+        private void LogDailyInventory(List<InventoryTb> inventoryItems)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            foreach (var item in inventoryItems)
+            {
+                // Check if log exists for this item today
+                var existingLog = _context.DailyInventoryLogs
+                    .FirstOrDefault(d => d.Name == item.Name && d.Date == today);
+
+                if (existingLog == null)
+                {
+                    // Create new log with current stock level
+                    var dailyInventoryLog = new DailyInventoryLog
+                    {
+                        Name = item.Name,
+                        Date = today,
+                        StartingStock = (decimal)item.Stock // Explicit cast from decimal? to decimal
+                    };
+                    _context.DailyInventoryLogs.Add(dailyInventoryLog);
+                }
+
+                // Check if usage log exists for this item today
+                var existingUsageLog = _context.DailyUsageTbs
+                    .FirstOrDefault(d => d.Name == item.Name && d.Date == today);
+
+                if (existingUsageLog == null)
+                {
+                    // Create new usage log
+                    var dailyUsageLog = new DailyUsageTb
+                    {
+                        Name = item.Name,
+                        Date = today,
+                        Used = 0
+                    };
+                    _context.DailyUsageTbs.Add(dailyUsageLog);
+                }
+            }
+            _context.SaveChanges();
         }
 
         public IActionResult ProcessOrders([FromBody] List<OrderItem> orders)
@@ -536,6 +587,20 @@ namespace NocturnalBrews.Controllers
                                 decimal amountToUse = Math.Round((decimal)((inventoryItem.Stock - inventoryItem.Used) * percentage), 2);
                                 inventoryItem.Used = Math.Round((decimal)(inventoryItem.Used + amountToUse), 2);
                                 inventoryItem.Stock = Math.Round((decimal)(inventoryItem.Stock - amountToUse), 2);
+
+                                // Track daily usage
+                                var dailyUsage = _context.DailyUsageTbs.FirstOrDefault(d => d.Name == ingredientName && d.Date == DateOnly.FromDateTime(DateTime.Today));
+                                if (dailyUsage == null)
+                                {
+                                    dailyUsage = new DailyUsageTb
+                                    {
+                                        Name = ingredientName,
+                                        Date = DateOnly.FromDateTime(DateTime.Today),
+                                        Used = 0
+                                    };
+                                    _context.DailyUsageTbs.Add(dailyUsage);
+                                }
+                                dailyUsage.Used = Math.Round((decimal)(dailyUsage.Used + amountToUse), 2);
                             }
                         }
                     }
@@ -553,11 +618,12 @@ namespace NocturnalBrews.Controllers
         public IActionResult Inventory()
         {
             var inventoryItems = _context.InventoryTbs.ToList();
+            // Ensure daily logs are created when viewing inventory
+            GetDailyInventory();
             return View(inventoryItems);
         }
+
     }
-
-
 
 
     public class OrderItem

@@ -19,6 +19,10 @@ public partial class NocturnalBrewsContext : DbContext
 
     public virtual DbSet<CupsListTb> CupsListTbs { get; set; }
 
+    public virtual DbSet<DailyInventoryLog> DailyInventoryLogs { get; set; }
+
+    public virtual DbSet<DailyUsageTb> DailyUsageTbs { get; set; }
+
     public virtual DbSet<InventoryTb> InventoryTbs { get; set; }
 
     public virtual DbSet<OrdersTb> OrdersTbs { get; set; }
@@ -51,6 +55,26 @@ public partial class NocturnalBrewsContext : DbContext
                 .IsUnicode(false);
         });
 
+        modelBuilder.Entity<DailyInventoryLog>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__DailyInv__3214EC07A884202E");
+
+            entity.HasIndex(e => new { e.Name, e.Date }, "UC_DailyInventoryLog_Name_Date").IsUnique();
+
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.StartingStock).HasColumnType("decimal(18, 2)");
+        });
+
+        modelBuilder.Entity<DailyUsageTb>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__DailyUsa__3214EC07AE675DCB");
+
+            entity.HasIndex(e => new { e.Name, e.Date }, "UC_DailyUsage_Name_Date").IsUnique();
+
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Used).HasColumnType("decimal(18, 2)");
+        });
+
         modelBuilder.Entity<InventoryTb>(entity =>
         {
             entity.HasKey(e => e.InventoryId).HasName("PK__Inventor__F5FDE6B35A96F038");
@@ -61,11 +85,11 @@ public partial class NocturnalBrewsContext : DbContext
                 .HasMaxLength(10)
                 .IsUnicode(false);
             entity.Property(e => e.Name).HasMaxLength(255);
-            entity.Property(e => e.Stock).HasColumnType("decimal(18, 0)");
+            entity.Property(e => e.Stock).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Timestamp)
                 .HasColumnType("datetime")
                 .HasColumnName("timestamp");
-            entity.Property(e => e.Used).HasColumnType("decimal(18, 0)");
+            entity.Property(e => e.Used).HasColumnType("decimal(10, 2)");
         });
 
         modelBuilder.Entity<OrdersTb>(entity =>
