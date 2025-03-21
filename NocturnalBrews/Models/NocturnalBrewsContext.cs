@@ -53,24 +53,19 @@ public partial class NocturnalBrewsContext : DbContext
 
         modelBuilder.Entity<InventoryTb>(entity =>
         {
-            entity.HasKey(e => e.InvId).HasName("PK__Inventor__9DC82C6A1C1264F4");
+            entity.HasKey(e => e.InventoryId).HasName("PK__Inventor__F5FDE6B35A96F038");
 
             entity.ToTable("InventoryTb");
 
-            entity.Property(e => e.Ingredient)
-                .HasMaxLength(50)
-                .IsUnicode(false);
             entity.Property(e => e.Measurement)
                 .HasMaxLength(10)
-                .IsUnicode(false)
-                .HasColumnName("measurement");
-            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 0)");
-            entity.Property(e => e.Remaining)
-                .HasColumnType("decimal(18, 0)")
-                .HasColumnName("remaining");
+                .IsUnicode(false);
+            entity.Property(e => e.Name).HasMaxLength(255);
+            entity.Property(e => e.Stock).HasColumnType("decimal(18, 0)");
             entity.Property(e => e.Timestamp)
                 .HasColumnType("datetime")
                 .HasColumnName("timestamp");
+            entity.Property(e => e.Used).HasColumnType("decimal(18, 0)");
         });
 
         modelBuilder.Entity<OrdersTb>(entity =>

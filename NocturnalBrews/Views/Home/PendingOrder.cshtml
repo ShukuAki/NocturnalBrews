@@ -194,7 +194,7 @@
                                                         <span class="badge badge-warning">@order.Status</span>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-primary btn-sm" onclick="updateStatus(@order.OrderId, 'Done')">
+                                                        <button class="btn btn-primary btn-sm" onclick="updateStatus(@order.OrderId, 'Done', '@order.ProductsArray')">
                                                             <i class="fas fa-check"></i> Done
                                                         </button>
                                                         <button class="btn btn-danger btn-sm" onclick="updateStatus(@order.OrderId, 'Cancelled')">
@@ -285,8 +285,8 @@
             });
         }
 
-        // Modify existing updateStatus function to also update inventory when status is "Done"
-        function updateStatus(orderId, status) {
+        // Modified updateStatus function to handle products array
+        function updateStatus(orderId, status, productsArray) {
             if (confirm('Are you sure you want to mark this order as ' + status + '?')) {
                 $.ajax({
                     url: '@Url.Action("UpdateOrderStatus", "Home")',
@@ -298,10 +298,28 @@
                     success: function(response) {
                         if (response.success) {
                             if (status === 'Done') {
-                                // Update cup inventory when order is marked as done
+                                // Update cup inventory
                                 updateCupInventory(orderId);
+                                
+                                // Process ingredients
+                                var products = JSON.parse(productsArray);
+                                $.ajax({
+                                    url: '@Url.Action("ProcessOrders", "Home")',
+                                    type: 'POST',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify(products),
+                                    success: function(inventoryResponse) {
+                                        console.log('Ingredients processed successfully', inventoryResponse);
+                                        location.reload();
+                                    },
+                                    error: function(xhr, status, error) {
+                                        console.error('Error processing ingredients:', error);
+                                        location.reload();
+                                    }
+                                });
+                            } else {
+                                location.reload();
                             }
-                            location.reload();
                         } else {
                             alert('Failed to update order status');
                         }

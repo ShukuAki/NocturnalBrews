@@ -7,6 +7,7 @@ using JsonException = Newtonsoft.Json.JsonException;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using System.IO;
+using Org.BouncyCastle.Asn1.X509;
 
 namespace NocturnalBrews.Controllers
 {
@@ -87,15 +88,15 @@ namespace NocturnalBrews.Controllers
         {
             var product = _context.ProductsTbs
                 .Where(p => p.ProductName == productName)
-                .Select(p => new { 
+                .Select(p => new {
                     Small = p.Small,
-                    Medium = p.Medium, 
+                    Medium = p.Medium,
                     Large = p.Large
                 })
                 .FirstOrDefault();
 
             if (product == null)
-                return Json(new object[] {});
+                return Json(new object[] { });
 
             var sizes = new List<object>();
             if (product.Small.HasValue) sizes.Add(new { size = "Small", price = product.Small.Value });
@@ -110,7 +111,7 @@ namespace NocturnalBrews.Controllers
         {
             var product = await _context.ProductsTbs
                 .Where(p => p.ProductName == productName)
-                .Select(p => new { 
+                .Select(p => new {
                     Small = p.Small,
                     Medium = p.Medium,
                     Large = p.Large
@@ -123,7 +124,7 @@ namespace NocturnalBrews.Controllers
             int? price = size.ToLower() switch
             {
                 "small" => product.Small,
-                "medium" => product.Medium, 
+                "medium" => product.Medium,
                 "large" => product.Large,
                 _ => null
             };
@@ -162,7 +163,7 @@ namespace NocturnalBrews.Controllers
             }
         }
 
-            public IActionResult Maintenance()
+        public IActionResult Maintenance()
         {
             var products = _context.ProductsTbs.ToList();
             ViewBag.Addons = _context.Addons.ToList();
@@ -312,7 +313,7 @@ namespace NocturnalBrews.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
-        
+
 
         public IActionResult OrdersDone()
         {
@@ -349,7 +350,7 @@ namespace NocturnalBrews.Controllers
                         // Create table
                         PdfPTable table = new PdfPTable(6) { WidthPercentage = 100 };
                         string[] headers = { "Order ID", "Products", "Total", "Payment Mode", "Order Date", "Status" };
-                        
+
                         // Add headers
                         foreach (string header in headers)
                         {
@@ -364,7 +365,7 @@ namespace NocturnalBrews.Controllers
                         foreach (var order in orders)
                         {
                             table.AddCell(order.OrderId.ToString());
-                            
+
                             // Handle products array
                             var products = JsonConvert.DeserializeObject<List<OrderItem>>(order.ProductsArray);
                             var productCell = new PdfPCell();
@@ -373,7 +374,7 @@ namespace NocturnalBrews.Controllers
                                 productCell.AddElement(new Phrase($"{item.ProductName} ({item.Size}) - ₱{item.Price}\n"));
                             }
                             table.AddCell(productCell);
-                            
+
                             table.AddCell($"₱{order.Total}");
                             table.AddCell(order.Mop);
                             table.AddCell(order.OrderDateTime.ToString());
@@ -394,77 +395,6 @@ namespace NocturnalBrews.Controllers
             }
         }
 
-        public IActionResult Inventory()
-        {
-            var inventoryItems = _context.InventoryTbs.ToList();
-            var cups = _context.CupsListTbs.ToList();
-
-            var viewModel = new InventoryViewModel
-            {
-                InventoryItems = inventoryItems
-            };
-
-            ViewBag.Cups = cups;
-            return View(viewModel);
-        }
-
-        // Inventory Item Methods
-        [HttpGet]
-        public IActionResult GetInventoryItem(int id)
-        {
-            var item = _context.InventoryTbs.Find(id);
-            return Json(item);
-        }
-
-        [HttpPost]
-        public IActionResult AddInventoryItem(InventoryTb item)
-        {
-            _context.InventoryTbs.Add(item);
-            _context.SaveChanges();
-            return Json(new { success = true });
-        }
-
-        // Cup Methods
-        [HttpGet]
-        public IActionResult GetCup(int id)
-        {
-            var cup = _context.CupsListTbs.Find(id);
-            return Json(cup);
-        }
-
-        [HttpPost]
-        public IActionResult AddCup(CupsListTb cup)
-        {
-            _context.CupsListTbs.Add(cup);
-            _context.SaveChanges();
-            return Json(new { success = true });
-        }
-
-        [HttpPost]
-        public IActionResult UpdateCup(CupsListTb cup)
-        {
-            var existingCup = _context.CupsListTbs.Find(cup.CupId);
-            if (existingCup == null) return NotFound();
-
-            existingCup.Size = cup.Size;
-            existingCup.Quantity = cup.Quantity;
-            existingCup.PricePerCup = cup.PricePerCup;
-            existingCup.PriceWholeSale = cup.PriceWholeSale;
-
-            _context.SaveChanges();
-            return Json(new { success = true });
-        }
-
-        [HttpPost]
-        public IActionResult DeleteCup(int id)
-        {
-            var cup = _context.CupsListTbs.Find(id);
-            if (cup == null) return NotFound();
-
-            _context.CupsListTbs.Remove(cup);
-            _context.SaveChanges();
-            return Json(new { success = true });
-        }
 
         //Generated Functions
         public IActionResult Privacy()
@@ -492,7 +422,7 @@ namespace NocturnalBrews.Controllers
 
                 // Deserialize the products array
                 var orderItems = JsonConvert.DeserializeObject<List<OrderItem>>(order.ProductsArray);
-                
+
                 // Process each ordered item
                 foreach (var item in orderItems)
                 {
@@ -502,7 +432,7 @@ namespace NocturnalBrews.Controllers
                     {
                         // Reduce the cup quantity by 1
                         cupInventory.Quantity -= 1;
-                        
+
                         // Prevent negative inventory
                         if (cupInventory.Quantity < 0)
                         {
@@ -521,7 +451,115 @@ namespace NocturnalBrews.Controllers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+        // Ingredient percentage usage per product and size
+        private static Dictionary<string, Dictionary<string, decimal>> IngredientUsage = new Dictionary<string, Dictionary<string, decimal>>
+        {
+            { "Latte_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m } } },
+            { "Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m } } },
+            { "Latte_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m } } },
+
+            { "Dolce Latte_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Cinnamon", 4m }, { "Condensed", 2m }, { "Milk", 18m } } },
+            { "Dolce Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Cinnamon", 7m }, { "Condensed", 3m }, { "Milk", 24m } } },
+            { "Dolce Latte_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Cinnamon", 21m }, { "Condensed", 4m }, { "Milk", 33m } } },
+
+            { "Caramel Macchiato_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "Caramel", 0.3m }, { "Vanilla", 0.15m } } },
+            { "Caramel Macchiato_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m }, { "Caramel", 0.6m }, { "Vanilla", 0.3m } } },
+            { "Caramel Macchiato_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m }, { "Caramel", 0.6m }, { "Vanilla", 0.45m } } },
+
+            { "Choco Hazelnut_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "Hazelnut Syrup", 0.3m }, { "Chocolate Syrup", 0.3m } } },
+            { "Choco Hazelnut_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m }, { "Hazelnut Syrup", 0.6m }, { "Chocolate Syrup", 0.3m } } },
+            { "Choco Hazelnut_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m }, { "Hazelnut Syrup", 0.6m }, { "Chocolate Syrup", 0.3m } } },
+
+            { "White Mocha_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "White Chocolate", 0.3m } } },
+            { "White Mocha_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m }, { "White Chocolate", 0.5m } } },
+            { "White Mocha_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m }, { "White Chocolate", 1.5m } } },
+
+            { "Iced Mocha_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "Chocolate Syrup", 0.3m }, { "Chocolate", 0.5m } } },
+            { "Iced Mocha_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m }, { "Chocolate Syrup", 0.45m }, { "Chocolate", 0.5m } } },
+            { "Iced Mocha_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m }, { "Chocolate Syrup", 0.6m }, { "Chocolate", 0.5m } } },
+
+            { "Americano_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m } } },
+            { "Americano_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m } } },
+            { "Americano_Large", new Dictionary<string, decimal> { { "Coffee", 7m } } },
+
+            { "Spanish Latte_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Condensed", 2m }, { "Milk", 18m } } },
+            { "Spanish Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Condensed", 3m }, { "Milk", 24m } } },
+            { "Spanish Latte_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Condensed", 4m }, { "Milk", 33m } } },
+
+            { "Matcha Latte_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Condensed", 2m }, { "Milk", 18m } } },
+            { "Matcha Latte_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Condensed", 2m }, { "Milk", 24m } } },
+            { "Matcha Latte_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Condensed", 4m }, { "Milk", 33m } } },
+
+            { "Strawberry Matcha_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Milk", 18m }, { "Strawberry Jam", 3m }, { "Strawberry Syrup", 0.3m } } },
+            { "Strawberry Matcha_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Milk", 24m }, { "Strawberry Syrup", 0.45m }, { "Strawberry Jam", 6m } } },
+            { "Strawberry Matcha_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Milk", 33m }, { "Strawberry Syrup", 0.6m }, { "Strawberry Jam", 6m } } },
+
+            { "Vanilla Matcha_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Milk", 18m }, { "Vanilla Syrup", 0.3m } } },
+            { "Vanilla Matcha_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Milk", 24m }, { "Vanilla Syrup", 0.45m } } },
+            { "Vanilla Matcha_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Milk", 33m }, { "Vanilla Syrup", 0.6m } } },
+
+            { "Blue-Berry Yogurt_Small", new Dictionary<string, decimal> { { "BlueBerry Jam", 3m }, { "Milk", 18m }, { "Yogurt Syrup", 0.3m } } },
+            { "Blue-Berry Yogurt_Medium", new Dictionary<string, decimal> { { "BlueBerry Jam", 6m }, { "Milk", 24m }, { "Yogurt Syrup", 0.45m } } },
+            { "Blue-Berry Yogurt_Large", new Dictionary<string, decimal> { { "BlueBerry Jam", 6m }, { "Milk", 33m }, { "Yogurt Syrup", 0.6m } } }
+        };
+
+        private Dictionary<string, decimal> GetInventory()
+        {
+            var inventory = new Dictionary<string, decimal>();
+            var inventoryItems = _context.InventoryTbs.ToList();
+            foreach (var item in inventoryItems)
+            {
+                inventory[item.Name] = Math.Round((decimal)(item.Stock - item.Used), 2);
+            }
+            return inventory;
+        }
+
+        public IActionResult ProcessOrders([FromBody] List<OrderItem> orders)
+        {
+            try
+            {
+                foreach (var order in orders)
+                {
+                    string key = $"{order.ProductName}_{order.Size}";
+
+                    if (IngredientUsage.ContainsKey(key))
+                    {
+                        foreach (var ingredient in IngredientUsage[key])
+                        {
+                            string ingredientName = ingredient.Key;
+                            decimal percentage = ingredient.Value / 100m;
+
+                            var inventoryItem = _context.InventoryTbs.FirstOrDefault(i => i.Name == ingredientName);
+                            if (inventoryItem != null)
+                            {
+                                decimal amountToUse = Math.Round((decimal)((inventoryItem.Stock - inventoryItem.Used) * percentage), 2);
+                                inventoryItem.Used = Math.Round((decimal)(inventoryItem.Used + amountToUse), 2);
+                                inventoryItem.Stock = Math.Round((decimal)(inventoryItem.Stock - amountToUse), 2);
+                            }
+                        }
+                    }
+                }
+
+                _context.SaveChanges();
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        public IActionResult Inventory()
+        {
+            var inventoryItems = _context.InventoryTbs.ToList();
+            return View(inventoryItems);
+        }
     }
+
+
+
+
     public class OrderItem
     {
         public string ProductName { get; set; }
