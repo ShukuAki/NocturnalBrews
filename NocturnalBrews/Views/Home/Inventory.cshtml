@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>NocBrew</title>
+    <title>Inventory Management - NocturnalBrews</title>
 
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -33,6 +33,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <!-- Bootstrap (Optional for extra styling) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <!-- DataTables -->
+    <link rel="stylesheet" href="~/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="~/plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="~/plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css">
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
     <div class="wrapper">
@@ -147,6 +152,12 @@
                                         <div class="col-sm-6">
                                             <h1>Inventory Management</h1>
                                         </div>
+                                        <div class="col-sm-6">
+                                            <ol class="breadcrumb float-sm-right">
+                                                <li class="breadcrumb-item"><a href="#">Home</a></li>
+                                                <li class="breadcrumb-item active">Inventory</li>
+                                            </ol>
+                                        </div>
                                     </div>
                                 </div>
                             </section>
@@ -154,93 +165,318 @@
                             <!-- Main content -->
                             <section class="content">
                                 <div class="container-fluid">
+                                    <!-- Summary Cards -->
+                                    <div class="row">
+                                        <div class="col-lg-3 col-6">
+                                            <div class="small-box bg-info">
+                                                <div class="inner">
+                                                    <h3>@Model.Sum(i => i.Stock + i.InventoryIncoming - i.Used)</h3>
+                                                    <p>Total Available Stock</p>
+                                                </div>
+                                                <div class="icon">
+                                                    <i class="fas fa-boxes"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-6">
+                                            <div class="small-box bg-success">
+                                                <div class="inner">
+                                                    <h3>@Model.Sum(i => i.InventoryIncoming)</h3>
+                                                    <p>Total Incoming Today</p>
+                                                </div>
+                                                <div class="icon">
+                                                    <i class="fas fa-truck-loading"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-6">
+                                            <div class="small-box bg-warning">
+                                                <div class="inner">
+                                                    <h3>@Model.Sum(i => i.Used)</h3>
+                                                    <p>Total Used Today</p>
+                                                </div>
+                                                <div class="icon">
+                                                    <i class="fas fa-chart-line"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-6">
+                                            <div class="small-box bg-danger">
+                                                <div class="inner">
+                                                    <h3>@Model.Count(i => (i.Stock + i.InventoryIncoming - i.Used) < 20)</h3>
+                                                    <p>Low Stock Items</p>
+                                                </div>
+                                                <div class="icon">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Current Inventory Card -->
                                     <div class="card">
-                                        <div class="card-header bg-primary text-white">
-                                            <h3 class="card-title"><i class="fas fa-warehouse"></i> Inventory List</h3>
+                                        <div class="card-header">
+                                            <h3 class="card-title">
+                                                <i class="fas fa-warehouse mr-1"></i>
+                                                Today's Inventory (@DateTime.Today.ToString("MMM dd, yyyy"))
+                                            </h3>
                                             <div class="card-tools">
-                                                <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#addInventoryModal">
+                                                <button type="button" class="btn btn-success btn-sm" onclick="showAddModal()">
                                                     <i class="fas fa-plus"></i> Add Item
                                                 </button>
                                             </div>
                                         </div>
-
-                                        <!-- Table -->
                                         <div class="card-body">
-                                            <table class="table table-bordered table-striped">
+                                            <table id="inventoryTable" class="table table-bordered table-striped">
                                                 <thead>
                                                     <tr>
-                                                        <th>ID</th>
                                                         <th>Name</th>
-                                                        <th>Stock</th>
+                                                        <th>Starting Stock</th>
                                                         <th>Used</th>
+                                                        <th>Incoming</th>
+                                                        <th>Available</th>
                                                         <th>Measurement</th>
-                                                        <th>Timestamp</th>
+                                                        <th>Status</th>
                                                         <th>Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @foreach (var item in Model)
-                                                    {
-                                                        <tr>
-                                                            <td>@item.InventoryId</td>
-                                                            <td>@item.Name</td>
-                                                            <td>@item.Stock</td>
-                                                            <td>@item.Used</td>
-                                                            <td>@item.Measurement</td>
-                                                            <td>@item.Timestamp</td>
-                                                            <td>
-                                                                <button class="btn btn-info btn-sm"><i class="fas fa-edit"></i></button>
-                                                                <button class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
-                                                            </td>
-                                                        </tr>
+                                                    @{
+                                                        var orderedItems = new[]
+                                                        {
+                                                            "Coffee",
+                                                            "Matcha",
+                                                            "Milk",
+                                                            "Condensed",
+                                                            "Caramel",
+                                                            "Hazelnut Syrup",
+                                                            "Vanilla",
+                                                            "White Chocolate Syrup",
+                                                            "Chocolate Syrup",
+                                                            "Yogurt Syrup",
+                                                            "Strawberry Syrup",
+                                                            "Chocolate Sauce",
+                                                            "Caramel Sauce",
+                                                            "White Chocolate Bar",
+                                                            "Chocolate Bar",
+                                                            "Cinnamon",
+                                                            "Honey",
+                                                            "Whipped Cream",
+                                                            "Strawberry Jam",
+                                                            "Mango Jam",
+                                                            "BlueBerry Jam",
+                                                            "12oz Cups",
+                                                            "16oz Cups",
+                                                            "22oz Cups",
+                                                            "Ice",
+                                                            "Water",
+
+                                                        };
+
+                                                        foreach (var itemName in orderedItems)
+                                                        {
+                                                            var item = Model.FirstOrDefault(i => i.Name == itemName);
+                                                            if (item != null)
+                                                            {
+                                                                var available = item.Stock + item.InventoryIncoming - item.Used;
+                                                                var status = available > 50 ? "success" : 
+                                                                   available > 20 ? "warning" : "danger";
+                                                                
+                                                                <tr>
+                                                                    <td>@item.Name</td>
+                                                                    <td>@item.Stock.ToString("F2")</td>
+                                                                    <td>@item.Used.ToString("F2")</td>
+                                                                    <td>@item.InventoryIncoming.ToString("F2")</td>
+                                                                    <td>@available.ToString("F2")</td>
+                                                                    <td>@item.Measurement</td>
+                                                                    <td>
+                                                                        <span class="badge badge-@status">
+                                                                            @(available > 50 ? "Good" : 
+                                                                              available > 20 ? "Low" : "Critical")
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <button class="btn btn-info btn-sm" onclick="showUpdateModal('@item.Name', @item.Stock)">
+                                                                            <i class="fas fa-edit"></i> Update
+                                                                        </button>
+                                                                        <button class="btn btn-success btn-sm" onclick="showAddStockModal('@item.Name', @item.Stock)">
+                                                                            <i class="fas fa-plus"></i> Add
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        }
                                                     }
                                                 </tbody>
                                             </table>
                                         </div>
+                                    </div>
 
-                                        <!-- Footer -->
-                                        <div class="card-footer">
-                                            <button class="btn btn-secondary btn-sm"><i class="fas fa-download"></i> Export</button>
+                                    <!-- Historical Data Section -->
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white">
+                                            <h3 class="card-title">
+                                                <i class="fas fa-history mr-1"></i>
+                                                Historical Inventory Data
+                                            </h3>
+                                        </div>
+                                        <div class="card-body">
+                                            <!-- Date Selection -->
+                                            <div class="row mb-4">
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>Single Date:</label>
+                                                        <input type="date" class="form-control" id="historyDate" 
+                                                               value="@DateTime.Today.ToString("yyyy-MM-dd")" 
+                                                               max="@DateTime.Today.ToString("yyyy-MM-dd")">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Date Range:</label>
+                                                        <div class="input-group">
+                                                            <input type="date" class="form-control" id="startDate" 
+                                                                   max="@DateTime.Today.ToString("yyyy-MM-dd")">
+                                                            <div class="input-group-append input-group-prepend">
+                                                                <span class="input-group-text">to</span>
+                                                            </div>
+                                                            <input type="date" class="form-control" id="endDate" 
+                                                                   max="@DateTime.Today.ToString("yyyy-MM-dd")">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group">
+                                                        <label>Export Options:</label>
+                                                        <div class="btn-group w-100">
+                                                            <button class="btn btn-success" onclick="exportSingleDate()">
+                                                                <i class="fas fa-file-excel"></i> Export Single Date
+                                                            </button>
+                                                            <button class="btn btn-info" onclick="exportDateRange()">
+                                                                <i class="fas fa-file-excel"></i> Export Range
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Historical Data Table -->
+                                            <table id="historyTable" class="table table-bordered table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Item Name</th>
+                                                        <th>Starting Stock</th>
+                                                        <th>Used</th>
+                                                        <th>Incoming</th>
+                                                        <th>End Stock</th>
+                                                        <th>Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="historyTableBody">
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 </div>
                             </section>
                         </div>
 
-                        <!-- Add Inventory Modal -->
-                        <div class="modal fade" id="addInventoryModal" tabindex="-1" aria-labelledby="addInventoryLabel" aria-hidden="true">
+                        <!-- Add Stock Modal -->
+                        <div class="modal fade" id="addStockModal">
                             <div class="modal-dialog">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title" id="addInventoryLabel">Add Inventory Item</h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
+                                        <h4 class="modal-title">Add Incoming Stock</h4>
+                                        <button type="button" class="close" data-dismiss="modal">&times;</button>
                                     </div>
                                     <div class="modal-body">
-                                        <form>
-                                            <div class="form-group">
-                                                <label for="itemName">Item Name</label>
-                                                <input type="text" class="form-control" id="itemName" placeholder="Enter name">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="itemStock">Stock</label>
-                                                <input type="number" step="0.01" class="form-control" id="itemStock" placeholder="Enter stock">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="itemUsed">Used</label>
-                                                <input type="number" step="0.01" class="form-control" id="itemUsed" placeholder="Enter used amount">
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="itemMeasurement">Measurement</label>
-                                                <select class="form-control" id="itemMeasurement">
-                                                    <option value="kg">kg</option>
-                                                    <option value="g">g</option>
-                                                    <option value="L">L</option>
-                                                </select>
-                                            </div>
-                                            <button type="submit" class="btn btn-primary">Save</button>
-                                        </form>
+                                        <input type="hidden" id="itemNameAdd" />
+                                        <div class="form-group">
+                                            <label>Current Stock</label>
+                                            <input type="number" class="form-control" id="currentStockAdd" readonly />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Additional Stock</label>
+                                            <input type="number" class="form-control" id="additionalStock" step="0.01" min="0" />
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-success" onclick="addStock()">Add Stock</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Update Item Modal -->
+                        <div class="modal fade" id="updateStockModal">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4 class="modal-title">Update Inventory Item</h4>
+                                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="form-group">
+                                            <label>Item Name</label>
+                                            <input type="text" class="form-control" id="updateItemName" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Starting Stock</label>
+                                            <input type="number" class="form-control" id="updateStock" step="0.01" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Used</label>
+                                            <input type="number" class="form-control" id="updateUsed" step="0.01" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Incoming</label>
+                                            <input type="number" class="form-control" id="updateIncoming" step="0.01" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Measurement</label>
+                                            <input type="text" class="form-control" id="updateMeasurement" readonly />
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-primary" onclick="updateInventoryItem()">Update</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Add New Item Modal -->
+                        <div class="modal fade" id="addNewItemModal">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4 class="modal-title">Add New Item</h4>
+                                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="form-group">
+                                            <label>Item Name</label>
+                                            <input type="text" class="form-control" id="newItemName" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Starting Stock</label>
+                                            <input type="number" class="form-control" id="newItemStock" step="0.01" min="0" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Measurement</label>
+                                            <select class="form-control" id="newItemMeasurement">
+                                                <option value="kg">kg</option>
+                                                <option value="g">g</option>
+                                                <option value="L">L</option>
+                                                <option value="ml">ml</option>
+                                                <option value="pcs">pcs</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-success" onclick="saveNewInventoryItem()">Add Item</button>
                                     </div>
                                 </div>
                             </div>
@@ -264,7 +500,7 @@
                 }
 
                 function saveNewItem() {
-                    const data = {
+                    const data = {      
                         ingredient: $('#addIngredient').val(),
                         quantity: $('#addQuantity').val(),
                         pricePer: $('#addPricePer').val(),
@@ -306,7 +542,10 @@
                 }
 
                 $(document).ready(function() {
-                    $('#inventoryTable').DataTable();
+                    $('#inventoryTable').DataTable({
+                        "order": [], // Disable initial sorting to maintain specified order
+                        "pageLength": 25 // Show all items on one page by default
+                    });
                 });
 
                 function editCup(id) {
@@ -365,6 +604,298 @@
                 $(document).ready(function() {
                     $('#cupsTable').DataTable();
                 });
+
+                function showAddStockModal(itemName, currentStock) {
+                    $('#itemNameAdd').val(itemName);
+                    $('#currentStockAdd').val(currentStock);
+                    $('#additionalStock').val('');
+                    $('#addStockModal').modal('show');
+                }
+
+                function addStock() {
+                    const data = {
+                        name: $('#itemNameAdd').val(),
+                        additionalStock: parseFloat($('#additionalStock').val())
+                    };
+
+                    if (!data.additionalStock || data.additionalStock <= 0) {
+                        alert('Please enter a valid amount greater than 0');
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '/Home/AddInventoryStock',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(data),
+                        success: function(response) {
+                            if (response.success) {
+                                $('#addStockModal').modal('hide');
+                                location.reload(); // Refresh the page to show updated inventory
+                            } else {
+                                alert('Error updating inventory: ' + response.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Error communicating with server');
+                        }
+                    });
+                }
+
+                $(document).ready(function() {
+                    // Initialize DataTable
+                    $('#inventoryTable').DataTable({
+                        "order": [], // Disable initial sorting to maintain specified order
+                        "pageLength": 25 // Show all items on one page by default
+                    });
+
+                    // Initialize DataTable for the history table
+                    $('#historyTable').DataTable({
+                        "order": [], // Disable initial sorting
+                        "pageLength": 25,
+                        "searching": false // Disable search for historical data
+                    });
+
+                    // Set today's date as default and load data
+                    var today = new Date().toISOString().split('T')[0];
+                    $('#historyDate').val(today);
+                    loadHistoricalData(today);
+
+                    // Handle date change
+                    $('#historyDate').change(function() {
+                        loadHistoricalData($(this).val());
+                    });
+                });
+
+                function loadHistoricalData(date) {
+                    $('#historyTableBody').html(`
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <i class="fas fa-spinner fa-spin"></i> Loading...
+                            </td>
+                        </tr>
+                    `);
+
+                    $.ajax({
+                        url: '/Home/GetInventoryHistoryByDate',
+                        type: 'GET',
+                        data: { date: date },
+                        success: function(response) {
+                            if (response.success && response.data.length > 0) {
+                                let html = '';
+                                var orderedItems = [
+                                    "Coffee",
+                                    "Matcha",
+                                    "Milk",
+                                    "Condensed",
+                                    "Caramel",
+                                    "Hazelnut Syrup",
+                                    "Vanilla",
+                                    "White Chocolate Syrup",
+                                    "Chocolate Syrup",
+                                    "Yogurt Syrup",
+                                    "Strawberry Syrup",
+                                    "Chocolate Sauce",
+                                    "Caramel Sauce",
+                                    "White Chocolate Bar",
+                                    "Chocolate Bar",
+                                    "Cinnamon",
+                                    "Honey",
+                                    "Whipped Cream",
+                                    "Strawberry Jam",
+                                    "Mango Jam",
+                                    "BlueBerry Jam",
+                                    "12oz Cups",
+                                    "16oz Cups",
+                                    "22oz Cups",
+                                    "Ice",
+                                    "Water"
+                                ];
+
+                                orderedItems.forEach(itemName => {
+                                    const item = response.data.find(x => x.name === itemName);
+                                    if (item) {
+                                        const status = item.endStock > 50 ? "success" : 
+                                                     item.endStock > 20 ? "warning" : "danger";
+                                        const statusText = item.endStock > 50 ? "Good" : 
+                                                     item.endStock > 20 ? "Low" : "Critical";
+
+                                        html += `
+                                            <tr>
+                                                <td>${item.name}</td>
+                                                <td>${item.startingStock.toFixed(2)}</td>
+                                                <td>${item.used.toFixed(2)}</td>
+                                                <td>${item.incoming.toFixed(2)}</td>
+                                                <td>${item.endStock.toFixed(2)}</td>
+                                                <td>
+                                                    <span class="badge badge-${status}">
+                                                        ${statusText}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }
+                                });
+                                
+                                $('#historyTableBody').html(html);
+                            } else {
+                                $('#historyTableBody').html(`
+                                    <tr>
+                                        <td colspan="6" class="text-center">
+                                            ${response.message || 'No data available for selected date'}
+                                        </td>
+                                    </tr>
+                                `);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error loading historical data:', error);
+                            $('#historyTableBody').html(`
+                                <tr>
+                                    <td colspan="6" class="text-center text-danger">
+                                        Error loading data. Please try again.
+                                    </td>
+                                </tr>
+                            `);
+                        }
+                    });
+                }
+
+                function showAddModal() {
+                    $('#newItemName').val('');
+                    $('#newItemStock').val('');
+                    $('#newItemMeasurement').val('kg');
+                    $('#addNewItemModal').modal('show');
+                }
+
+                function saveNewInventoryItem() {
+                    const data = {
+                        name: $('#newItemName').val().trim(),
+                        stock: parseFloat($('#newItemStock').val()),
+                        measurement: $('#newItemMeasurement').val()
+                    };
+
+                    if (!data.name) {
+                        alert('Please enter an item name');
+                        return;
+                    }
+
+                    if (!data.stock || data.stock < 0) {
+                        alert('Please enter a valid stock amount');
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '/Home/AddNewInventoryItem',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(data),
+                        success: function(response) {
+                            if (response.success) {
+                                $('#addNewItemModal').modal('hide');
+                                location.reload(); // Refresh the page to show the new item
+                            } else {
+                                alert('Error adding item: ' + response.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Error communicating with server');
+                        }
+                    });
+                }
+
+                function showUpdateModal(itemName, currentStock) {
+                    // Find the row data
+                    const row = $(`tr:contains('${itemName}')`);
+                    const used = parseFloat(row.find('td:eq(2)').text());
+                    const incoming = parseFloat(row.find('td:eq(3)').text());
+                    const measurement = row.find('td:eq(5)').text();
+
+                    // Populate the modal
+                    $('#updateItemName').val(itemName);
+                    $('#updateStock').val(currentStock);
+                    $('#updateUsed').val(used);
+                    $('#updateIncoming').val(incoming);
+                    $('#updateMeasurement').val(measurement);
+
+                    $('#updateStockModal').modal('show');
+                }
+
+                function updateInventoryItem() {
+                    const data = {
+                        originalName: $('#updateItemName').val(),
+                        newName: $('#updateItemName').val(),
+                        stock: parseFloat($('#updateStock').val()),
+                        used: parseFloat($('#updateUsed').val()),
+                        incoming: parseFloat($('#updateIncoming').val())
+                    };
+
+                    // Validation
+                    if (!data.newName.trim()) {
+                        alert('Item name cannot be empty');
+                        return;
+                    }
+
+                    if (isNaN(data.stock) || data.stock < 0) {
+                        alert('Please enter a valid stock amount');
+                        return;
+                    }
+
+                    if (isNaN(data.used) || data.used < 0) {
+                        alert('Please enter a valid used amount');
+                        return;
+                    }
+
+                    if (isNaN(data.incoming) || data.incoming < 0) {
+                        alert('Please enter a valid incoming amount');
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '/Home/UpdateInventoryItem',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(data),
+                        success: function(response) {
+                            if (response.success) {
+                                $('#updateStockModal').modal('hide');
+                                location.reload();
+                            } else {
+                                alert('Error updating inventory: ' + response.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Error communicating with server');
+                        }
+                    });
+                }
+
+                function exportSingleDate() {
+                    const date = $('#historyDate').val();
+                    if (!date) {
+                        alert('Please select a date');
+                        return;
+                    }
+
+                    window.location.href = `/Home/ExportInventorySingleDate?date=${date}`;
+                }
+
+                function exportDateRange() {
+                    const startDate = $('#startDate').val();
+                    const endDate = $('#endDate').val();
+
+                    if (!startDate || !endDate) {
+                        alert('Please select both start and end dates');
+                        return;
+                    }
+
+                    if (new Date(startDate) > new Date(endDate)) {
+                        alert('Start date must be before or equal to end date');
+                        return;
+                    }
+
+                    window.location.href = `/Home/ExportInventoryDateRange?startDate=${startDate}&endDate=${endDate}`;
+                }
             </script>
 
 
@@ -389,34 +920,128 @@
     <script src="~/plugins/jquery/jquery.min.js"></script>
     <!-- jQuery UI 1.11.4 -->
     <script src="~/plugins/jquery-ui/jquery-ui.min.js"></script>
-    <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
-    <script>
-        $.widget.bridge('uibutton', $.ui.button)
-    </script>
     <!-- Bootstrap 4 -->
     <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- ChartJS -->
-    <script src="~/plugins/chart.js/Chart.min.js"></script>
-
-    <!-- jQuery Knob Chart -->
-    <script src="~/plugins/jquery-knob/jquery.knob.min.js"></script>
-    <!-- daterangepicker -->
-    <script src="~/plugins/moment/moment.min.js"></script>
-    <script src="~/plugins/daterangepicker/daterangepicker.js"></script>
-    <!-- Tempusdominus Bootstrap 4 -->
-    <script src="~/plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js"></script>
-    <!-- Summernote -->
-    <script src="~/plugins/summernote/summernote-bs4.min.js"></script>
-    <!-- overlayScrollbars -->
-    <script src="~/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
+    <!-- DataTables -->
+    <script src="~/plugins/datatables/jquery.dataTables.min.js"></script>
+    <script src="~/plugins/datatables-bs4/js/dataTables.bootstrap4.min.js"></script>
     <!-- AdminLTE App -->
     <script src="~/dist/js/adminlte.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.1/dist/js/adminlte.min.js"></script>
 
+    <!-- Your custom scripts AFTER all dependencies -->
+    <script>
+        function loadHistoricalData(date) {
+            $('#historyTableBody').html(`
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </td>
+                </tr>
+            `);
 
+            $.ajax({
+                url: '/Home/GetInventoryHistoryByDate',
+                type: 'GET',
+                data: { date: date },
+                success: function(response) {
+                    if (response.success && response.data.length > 0) {
+                        let html = '';
+                        var orderedItems = [
+                            "Coffee",
+                            "Matcha",
+                            "Milk",
+                            "Condensed",
+                            "Caramel",
+                            "Hazelnut Syrup",
+                            "Vanilla",
+                            "White Chocolate Syrup",
+                            "Chocolate Syrup",
+                            "Yogurt Syrup",
+                            "Strawberry Syrup",
+                            "Chocolate Sauce",
+                            "Caramel Sauce",
+                            "White Chocolate Bar",
+                            "Chocolate Bar",
+                            "Cinnamon",
+                            "Honey",
+                            "Whipped Cream",
+                            "Strawberry Jam",
+                            "Mango Jam",
+                            "BlueBerry Jam",
+                            "12oz Cups",
+                            "16oz Cups",
+                            "22oz Cups",
+                            "Ice",
+                            "Water"
+                        ];
+
+                        orderedItems.forEach(itemName => {
+                            const item = response.data.find(x => x.name === itemName);
+                            if (item) {
+                                const status = item.endStock > 50 ? "success" : 
+                                             item.endStock > 20 ? "warning" : "danger";
+                                const statusText = item.endStock > 50 ? "Good" : 
+                                                 item.endStock > 20 ? "Low" : "Critical";
+
+                                html += `
+                                    <tr>
+                                        <td>${item.name}</td>
+                                        <td>${item.startingStock.toFixed(2)}</td>
+                                        <td>${item.used.toFixed(2)}</td>
+                                        <td>${item.incoming.toFixed(2)}</td>
+                                        <td>${item.endStock.toFixed(2)}</td>
+                                        <td>
+                                            <span class="badge badge-${status}">
+                                                ${statusText}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+                            }
+                        });
+                        
+                        $('#historyTableBody').html(html);
+                    } else {
+                        $('#historyTableBody').html(`
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    ${response.message || 'No data available for selected date'}
+                                </td>
+                            </tr>
+                        `);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading historical data:', error);
+                    $('#historyTableBody').html(`
+                        <tr>
+                            <td colspan="6" class="text-center text-danger">
+                                Error loading data. Please try again.
+                            </td>
+                        </tr>
+                    `);
+                }
+            });
+        }
+
+        // Document ready function
+        $(document).ready(function() {
+            // Initialize DataTable for the main inventory table
+            $('#inventoryTable').DataTable({
+                "order": [],
+                "pageLength": 25
+            });
+
+            // Set today's date as default and load data
+            var today = new Date().toISOString().split('T')[0];
+            $('#historyDate').val(today);
+            loadHistoricalData(today);
+
+            // Handle date change
+            $('#historyDate').change(function() {
+                loadHistoricalData($(this).val());
+            });
+        });
+    </script>
 </body>
 </html>

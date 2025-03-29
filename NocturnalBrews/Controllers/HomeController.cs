@@ -8,6 +8,9 @@ using iTextSharp.text;
 using iTextSharp.text.pdf;
 using System.IO;
 using Org.BouncyCastle.Asn1.X509;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using ClosedXML.Excel;
 
 namespace NocturnalBrews.Controllers
 {
@@ -23,7 +26,9 @@ namespace NocturnalBrews.Controllers
 
         public IActionResult Index()
         {
-            // Existing code for products
+            // Initialize daily inventory records when application starts
+            InitializeDailyInventory();
+
             var products = _context.ProductsTbs.ToList();
             ViewBag.Addons = _context.Addons.ToList();
 
@@ -457,53 +462,61 @@ namespace NocturnalBrews.Controllers
         // Ingredient percentage usage per product and size
         private static Dictionary<string, Dictionary<string, decimal>> IngredientUsage = new Dictionary<string, Dictionary<string, decimal>>
         {
-            { "Latte_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m } } },
-            { "Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m } } },
-            { "Latte_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m } } },
+            { "Latte_Small", new Dictionary<string, decimal> { { "Coffee", 1.5m }, { "Milk", 12m }, { "12oz Cups", 1m } } },
+            { "Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 2.5m }, { "Milk", 14m }, { "16oz Cups", 1m } } },
+            { "Latte_Large", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 16m }, { "22oz Cups", 1m } } },
 
-            { "Dolce Latte_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Cinnamon", 4m }, { "Condensed", 2m }, { "Milk", 18m } } },
-            { "Dolce Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Cinnamon", 7m }, { "Condensed", 3m }, { "Milk", 24m } } },
-            { "Dolce Latte_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Cinnamon", 21m }, { "Condensed", 4m }, { "Milk", 33m } } },
+            { "Dolce Latte_Small", new Dictionary<string, decimal> { { "Coffee", 1.5m }, { "Cinnamon", 4m }, { "Condensed", 1.5m }, { "Milk", 12m }, { "12oz Cups", 1m } } },
+            { "Dolce Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 2.5m }, { "Cinnamon", 7m }, { "Condensed", 3m }, { "Milk", 14m }, { "16oz Cups", 1m } } },
+            { "Dolce Latte_Large", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Cinnamon", 14m }, { "Condensed", 5m }, { "Milk", 16m }, { "22oz Cups", 1m } } },
 
-            { "Caramel Macchiato_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "Caramel", 0.3m }, { "Vanilla", 0.15m } } },
-            { "Caramel Macchiato_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m }, { "Caramel", 0.6m }, { "Vanilla", 0.3m } } },
-            { "Caramel Macchiato_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m }, { "Caramel", 0.6m }, { "Vanilla", 0.45m } } },
+            { "Caramel Macchiato_Small", new Dictionary<string, decimal> { { "Coffee", 1.5m }, { "Milk", 12m }, { "Caramel", 0.3m }, { "Vanilla", 0.15m }, { "12oz Cups", 1m } } },
+            { "Caramel Macchiato_Medium", new Dictionary<string, decimal> { { "Coffee", 2.5m }, { "Milk", 14m }, { "Caramel", 0.6m }, { "Vanilla", 0.3m }, { "16oz Cups", 1m } } },
+            { "Caramel Macchiato_Large", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 16m }, { "Caramel", 0.85m }, { "Vanilla", 0.60m }, { "22oz Cups", 1m } } },
 
-            { "Choco Hazelnut_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "Hazelnut Syrup", 0.3m }, { "Chocolate Syrup", 0.3m } } },
-            { "Choco Hazelnut_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m }, { "Hazelnut Syrup", 0.6m }, { "Chocolate Syrup", 0.3m } } },
-            { "Choco Hazelnut_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m }, { "Hazelnut Syrup", 0.6m }, { "Chocolate Syrup", 0.3m } } },
+            { "Choco Hazelnut_Small", new Dictionary<string, decimal> { { "Coffee", 1.5m }, { "Milk", 12m }, { "Hazelnut Syrup", 0.3m }, { "12oz Cups", 1m } } },
+            { "Choco Hazelnut_Medium", new Dictionary<string, decimal> { { "Coffee", 2.5m }, { "Milk", 14m }, { "Hazelnut Syrup", 0.6m }, { "16oz Cups", 1m } } },
+            { "Choco Hazelnut_Large", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 16m }, { "Hazelnut Syrup", 0.85m }, { "22oz Cups", 1m } } },
 
-            { "White Mocha_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "White Chocolate", 0.3m } } },
-            { "White Mocha_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m }, { "White Chocolate", 0.5m } } },
-            { "White Mocha_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m }, { "White Chocolate", 1.5m } } },
+            { "White Mocha_Small", new Dictionary<string, decimal> { { "Coffee", 1.5m }, { "Milk", 12m }, { "White Chocolate Bar", 0.3m }, { "White Chocolate Syrup", 0.3m }, { "12oz Cups", 1m } } },
+            { "White Mocha_Medium", new Dictionary<string, decimal> { { "Coffee", 2.5m }, { "Milk", 14m }, { "White Chocolate Bar", 0.5m }, { "White Chocolate Syrup", 0.6m }, { "16oz Cups", 1m } } },
+            { "White Mocha_Large", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 16m }, { "White Chocolate Bar", 1.5m }, { "White Chocolate Syrup", 0.85m }, { "22oz Cups", 1m } } },
 
-            { "Iced Mocha_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "Chocolate Syrup", 0.3m }, { "Chocolate", 0.5m } } },
-            { "Iced Mocha_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Milk", 24m }, { "Chocolate Syrup", 0.45m }, { "Chocolate", 0.5m } } },
-            { "Iced Mocha_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Milk", 33m }, { "Chocolate Syrup", 0.6m }, { "Chocolate", 0.5m } } },
+            { "Iced Mocha_Small", new Dictionary<string, decimal> { { "Coffee", 1.5m }, { "Milk", 12m }, { "Chocolate Syrup", 0.3m }, { "Chocolate Bar", 0.5m }, { "12oz Cups", 1m } } },
+            { "Iced Mocha_Medium", new Dictionary<string, decimal> { { "Coffee", 2.5m }, { "Milk", 14m }, { "Chocolate Syrup", 0.6m }, { "Chocolate Bar", 1m }, { "16oz Cups", 1m } } },
+            { "Iced Mocha_Large", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Milk", 18m }, { "Chocolate Syrup", 0.85m }, { "Chocolate Bar", 1.5m }, { "22oz Cups", 1m } } },
 
-            { "Americano_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m } } },
-            { "Americano_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m } } },
-            { "Americano_Large", new Dictionary<string, decimal> { { "Coffee", 7m } } },
+            { "Americano_Small", new Dictionary<string, decimal> { { "Coffee", 1.5m }, { "Water", 18m }, { "12oz Cups", 1m } } },
+            { "Americano_Medium", new Dictionary<string, decimal> { { "Coffee", 2.5m }, { "Water", 18m }, { "16oz Cups", 1m } } },
+            { "Americano_Large", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Water", 18m }, { "22oz Cups", 1m } } },
 
-            { "Spanish Latte_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Condensed", 2m }, { "Milk", 18m } } },
-            { "Spanish Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Condensed", 3m }, { "Milk", 24m } } },
-            { "Spanish Latte_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Condensed", 4m }, { "Milk", 33m } } },
+            { "Spanish Latte_Small", new Dictionary<string, decimal> { { "Coffee", 3.5m }, { "Condensed", 2m }, { "Milk", 18m }, { "12oz Cups", 1m } } },
+            { "Spanish Latte_Medium", new Dictionary<string, decimal> { { "Coffee", 5.5m }, { "Condensed", 3m }, { "Milk", 24m }, { "16oz Cups", 1m } } },
+            { "Spanish Latte_Large", new Dictionary<string, decimal> { { "Coffee", 7m }, { "Condensed", 4m }, { "Milk", 33m }, { "22oz Cups", 1m } } },
 
-            { "Matcha Latte_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Condensed", 2m }, { "Milk", 18m } } },
-            { "Matcha Latte_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Condensed", 2m }, { "Milk", 24m } } },
-            { "Matcha Latte_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Condensed", 4m }, { "Milk", 33m } } },
+            { "Matcha Latte_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Condensed", 2m }, { "Milk", 18m }, { "12oz Cups", 1m } } },
+            { "Matcha Latte_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Condensed", 2m }, { "Milk", 24m }, { "16oz Cups", 1m } } },
+            { "Matcha Latte_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Condensed", 4m }, { "Milk", 33m }, { "22oz Cups", 1m } } },
 
-            { "Strawberry Matcha_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Milk", 18m }, { "Strawberry Jam", 3m }, { "Strawberry Syrup", 0.3m } } },
-            { "Strawberry Matcha_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Milk", 24m }, { "Strawberry Syrup", 0.45m }, { "Strawberry Jam", 6m } } },
-            { "Strawberry Matcha_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Milk", 33m }, { "Strawberry Syrup", 0.6m }, { "Strawberry Jam", 6m } } },
+            { "Strawberry Matcha_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Milk", 18m }, { "Strawberry Jam", 3m }, { "Strawberry Syrup", 0.3m }, { "12oz Cups", 1m } } },
+            { "Strawberry Matcha_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Milk", 24m }, { "Strawberry Syrup", 0.45m }, { "Strawberry Jam", 6m }, { "16oz Cups", 1m } } },
+            { "Strawberry Matcha_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Milk", 33m }, { "Strawberry Syrup", 0.6m }, { "Strawberry Jam", 6m }, { "22oz Cups", 1m } } },
 
-            { "Vanilla Matcha_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Milk", 18m }, { "Vanilla Syrup", 0.3m } } },
-            { "Vanilla Matcha_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Milk", 24m }, { "Vanilla Syrup", 0.45m } } },
-            { "Vanilla Matcha_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Milk", 33m }, { "Vanilla Syrup", 0.6m } } },
+            { "Vanilla Matcha_Small", new Dictionary<string, decimal> { { "Matcha", 1.5m }, { "Milk", 18m }, { "Vanilla Syrup", 0.3m }, { "12oz Cups", 1m } } },
+            { "Vanilla Matcha_Medium", new Dictionary<string, decimal> { { "Matcha", 2.5m }, { "Milk", 24m }, { "Vanilla Syrup", 0.45m }, { "16oz Cups", 1m } } },
+            { "Vanilla Matcha_Large", new Dictionary<string, decimal> { { "Matcha", 3.5m }, { "Milk", 33m }, { "Vanilla Syrup", 0.6m }, { "22oz Cups", 1m } } },
 
-            { "Blue-Berry Yogurt_Small", new Dictionary<string, decimal> { { "BlueBerry Jam", 3m }, { "Milk", 18m }, { "Yogurt Syrup", 0.3m } } },
-            { "Blue-Berry Yogurt_Medium", new Dictionary<string, decimal> { { "BlueBerry Jam", 6m }, { "Milk", 24m }, { "Yogurt Syrup", 0.45m } } },
-            { "Blue-Berry Yogurt_Large", new Dictionary<string, decimal> { { "BlueBerry Jam", 6m }, { "Milk", 33m }, { "Yogurt Syrup", 0.6m } } }
+            { "Blue-Berry Yogurt_Small", new Dictionary<string, decimal> { { "BlueBerry Jam", 3m }, { "Milk", 12m }, { "Yogurt Syrup", 0.30m }, { "12oz Cups", 1m } } },
+            { "Blue-Berry Yogurt_Medium", new Dictionary<string, decimal> { { "BlueBerry Jam", 6m }, { "Milk", 14m }, { "Yogurt Syrup", 0.60m }, { "16oz Cups", 1m } } },
+            { "Blue-Berry Yogurt_Large", new Dictionary<string, decimal> { { "BlueBerry Jam", 10m }, { "Milk", 16m }, { "Yogurt Syrup", 0.85m }, { "22oz Cups", 1m } } },
+
+            { "Strawberry Yogurt_Small", new Dictionary<string, decimal> { { "Strawberry Jam", 3m }, { "Milk", 12m }, { "Yogurt Syrup", 0.30m }, { "12oz Cups", 1m } } },
+            { "Strawberry Yogurt_Medium", new Dictionary<string, decimal> { { "Strawberry Jam", 6m }, { "Milk", 14m }, { "Yogurt Syrup", 0.60m }, { "16oz Cups", 1m } } },
+            { "Strawberry Yogurt_Large", new Dictionary<string, decimal> { { "Strawberry Jam", 10m }, { "Milk", 16m }, { "Yogurt Syrup", 0.85m }, { "22oz Cups", 1m } } },
+
+            { "Mango Yogurt_Small", new Dictionary<string, decimal> { { "Mango Jam", 3m }, { "Milk", 12m }, { "Yogurt Syrup", 0.30m }, { "12oz Cups", 1m } } },
+            { "Mango Yogurt_Medium", new Dictionary<string, decimal> { { "Mango Jam", 6m }, { "Milk", 14m }, { "Yogurt Syrup", 0.60m }, { "16oz Cups", 1m } } },
+            { "Mango Yogurt_Large", new Dictionary<string, decimal> { { "Mango Jam", 10m }, { "Milk", 16m }, { "Yogurt Syrup", 0.85m }, { "22oz Cups", 1m } } }
         };
 
         private Dictionary<string, Dictionary<DateTime, decimal>> GetDailyInventory()
@@ -520,56 +533,78 @@ namespace NocturnalBrews.Controllers
                 {
                     dailyInventory[item.Name] = new Dictionary<DateTime, decimal>();
                 }
-                dailyInventory[item.Name][DateTime.Today] = Math.Round((decimal)(item.Stock - item.Used), 2);
+                dailyInventory[item.Name][DateTime.Today] = Math.Round((decimal)(item.Stock - item.Used + item.InventoryIncoming), 2);
             }
             return dailyInventory;
         }
 
         private void LogDailyInventory(List<InventoryTb> inventoryItems)
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            var today = DateTime.Today;
 
-            foreach (var item in inventoryItems)
+            // Get all unique item names from the inventory
+            var allItemNames = _context.InventoryTbs
+                .Select(i => i.Name)
+                .Distinct()
+                .ToList();
+
+            foreach (var itemName in allItemNames)
             {
-                // Check if log exists for this item today
-                var existingLog = _context.DailyInventoryLogs
-                    .FirstOrDefault(d => d.Name == item.Name && d.Date == today);
+                // Check if today's record exists
+                var todayRecord = _context.InventoryTbs
+                    .FirstOrDefault(i => i.Name == itemName && i.DateToday.Date == today);
 
-                if (existingLog == null)
+                if (todayRecord == null)
                 {
-                    // Create new log with current stock level
-                    var dailyInventoryLog = new DailyInventoryLog
-                    {
-                        Name = item.Name,
-                        Date = today,
-                        StartingStock = (decimal)item.Stock // Explicit cast from decimal? to decimal
-                    };
-                    _context.DailyInventoryLogs.Add(dailyInventoryLog);
-                }
+                    // Get yesterday's record
+                    var yesterdayRecord = _context.InventoryTbs
+                        .Where(i => i.Name == itemName && i.DateToday.Date < today)
+                        .OrderByDescending(i => i.DateToday)
+                        .FirstOrDefault();
 
-                // Check if usage log exists for this item today
-                var existingUsageLog = _context.DailyUsageTbs
-                    .FirstOrDefault(d => d.Name == item.Name && d.Date == today);
+                    // Get the measurement from the most recent record
+                    var measurement = yesterdayRecord?.Measurement ?? "N/A";
 
-                if (existingUsageLog == null)
-                {
-                    // Create new usage log
-                    var dailyUsageLog = new DailyUsageTb
+                    // Calculate ending stock from yesterday
+                    decimal endingStock = 0;
+                    if (yesterdayRecord != null)
                     {
-                        Name = item.Name,
-                        Date = today,
-                        Used = 0
+                        // Keep yesterday's record unchanged and use its final values for today's starting point
+                        endingStock = yesterdayRecord.Stock - yesterdayRecord.Used + yesterdayRecord.InventoryIncoming;
+                    }
+
+                    // Create new record for today
+                    var newRecord = new InventoryTb
+                    {
+                        Name = itemName,
+                        DateToday = today,
+                        Stock = endingStock,  // Start with yesterday's ending balance
+                        Used = 0,  // Reset usage for the new day
+                        InventoryIncoming = 0,  // Reset incoming for the new day
+                        Measurement = measurement,
                     };
-                    _context.DailyUsageTbs.Add(dailyUsageLog);
+
+                    _context.InventoryTbs.Add(newRecord);  // Add as new record
                 }
             }
-            _context.SaveChanges();
+
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                Console.WriteLine($"Error in LogDailyInventory: {ex.Message}");
+            }
         }
 
         public IActionResult ProcessOrders([FromBody] List<OrderItem> orders)
         {
             try
             {
+                var today = DateTime.Today;
+
                 foreach (var order in orders)
                 {
                     string key = $"{order.ProductName}_{order.Size}";
@@ -579,28 +614,25 @@ namespace NocturnalBrews.Controllers
                         foreach (var ingredient in IngredientUsage[key])
                         {
                             string ingredientName = ingredient.Key;
-                            decimal percentage = ingredient.Value / 100m;
+                            decimal amountToUse;
 
-                            var inventoryItem = _context.InventoryTbs.FirstOrDefault(i => i.Name == ingredientName);
+                            // Special handling for cups
+                            if (ingredientName.Contains("Cups"))
+                            {
+                                amountToUse = ingredient.Value; // Use the direct value (1) for cups
+                            }
+                            else
+                            {
+                                decimal percentage = ingredient.Value / 100m;
+                                amountToUse = Math.Round((decimal)(percentage), 2);
+                            }
+
+                            var inventoryItem = _context.InventoryTbs
+                                .FirstOrDefault(i => i.Name == ingredientName && i.DateToday.Date == today);
+
                             if (inventoryItem != null)
                             {
-                                decimal amountToUse = Math.Round((decimal)((inventoryItem.Stock - inventoryItem.Used) * percentage), 2);
                                 inventoryItem.Used = Math.Round((decimal)(inventoryItem.Used + amountToUse), 2);
-                                inventoryItem.Stock = Math.Round((decimal)(inventoryItem.Stock - amountToUse), 2);
-
-                                // Track daily usage
-                                var dailyUsage = _context.DailyUsageTbs.FirstOrDefault(d => d.Name == ingredientName && d.Date == DateOnly.FromDateTime(DateTime.Today));
-                                if (dailyUsage == null)
-                                {
-                                    dailyUsage = new DailyUsageTb
-                                    {
-                                        Name = ingredientName,
-                                        Date = DateOnly.FromDateTime(DateTime.Today),
-                                        Used = 0
-                                    };
-                                    _context.DailyUsageTbs.Add(dailyUsage);
-                                }
-                                dailyUsage.Used = Math.Round((decimal)(dailyUsage.Used + amountToUse), 2);
                             }
                         }
                     }
@@ -617,19 +649,563 @@ namespace NocturnalBrews.Controllers
 
         public IActionResult Inventory()
         {
-            var inventoryItems = _context.InventoryTbs.ToList();
-            // Ensure daily logs are created when viewing inventory
+            var today = DateTime.Today;
+            var inventoryItems = _context.InventoryTbs
+                .Where(i => i.DateToday.Date == today)
+                .ToList();
+                
+            // Ensure daily records are created
             GetDailyInventory();
             return View(inventoryItems);
         }
 
-    }
+        public IActionResult GetInventoryHistory(string itemName, DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                var history = _context.InventoryTbs
+                    .Where(inv => inv.Name == itemName
+                             && inv.DateToday.Date >= startDate.Date
+                             && inv.DateToday.Date <= endDate.Date)
+                    .OrderBy(inv => inv.DateToday)
+                    .Select(inv => new
+                    {
+                        name = inv.Name,
+                        date = inv.DateToday.ToString("yyyy-MM-dd"),
+                        startingStock = Math.Round(inv.Stock, 2),
+                        used = Math.Round(inv.Used, 2),
+                        incoming = Math.Round(inv.InventoryIncoming, 2),
+                        endStock = Math.Round(inv.Stock - inv.Used + inv.InventoryIncoming, 2)
+                    }).ToList();
 
+                return Json(new { success = true, data = history });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
 
-    public class OrderItem
-    {
-        public string ProductName { get; set; }
-        public string Size { get; set; }
-        public decimal Price { get; set; }
+        public IActionResult GetDailyHistory(int days = 7)  // Default to 7 days
+        {
+            try
+            {
+                var endDate = DateTime.Today;
+                var startDate = endDate.AddDays(-days + 1);
+
+                var history = _context.InventoryTbs
+                    .Where(inv => inv.DateToday.Date >= startDate && inv.DateToday.Date <= endDate)
+                    .OrderByDescending(inv => inv.DateToday)
+                    .ThenBy(inv => inv.Name)
+                    .Select(inv => new
+                    {
+                        name = inv.Name,
+                        date = inv.DateToday.ToString("yyyy-MM-dd"),
+                        startingStock = Math.Round(inv.Stock, 2),
+                        used = Math.Round(inv.Used, 2),
+                        incoming = Math.Round(inv.InventoryIncoming, 2),
+                        endStock = Math.Round(inv.Stock - inv.Used + inv.InventoryIncoming, 2)
+                    }).ToList();
+
+                return Json(new { success = true, data = history });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult UpdateStock([FromBody] UpdateStockModel model)
+        {
+            try
+            {
+                var today = DateTime.Today;
+                var item = _context.InventoryTbs
+                    .FirstOrDefault(i => i.Name == model.Name && i.DateToday.Date == today);
+                    
+                if (item != null)
+                {
+                    item.InventoryIncoming += model.Stock - item.Stock;
+                    item.Stock = model.Stock;
+                    _context.SaveChanges();
+                    return Json(new { success = true });
+                }
+                return Json(new { success = false, message = "Item not found" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        public class UpdateStockModel
+        {
+            public string Name { get; set; }
+            public decimal Stock { get; set; }
+        }
+
+        public void InitializeDailyInventory()
+        {
+            var today = DateTime.Today;
+
+            // Get all unique item names from the inventory
+            var allItemNames = _context.InventoryTbs
+                .Select(i => i.Name)
+                .Distinct()
+                .ToList();
+
+            foreach (var itemName in allItemNames)
+            {
+                // Check if today's record exists
+                var todayRecord = _context.InventoryTbs
+                    .FirstOrDefault(i => i.Name == itemName && i.DateToday.Date == today);
+
+                if (todayRecord == null)
+                {
+                    // Get yesterday's record
+                    var yesterdayRecord = _context.InventoryTbs
+                        .Where(i => i.Name == itemName && i.DateToday.Date < today)
+                        .OrderByDescending(i => i.DateToday)
+                        .FirstOrDefault();
+
+                    // Calculate ending stock from yesterday
+                    decimal endingStock = 0;
+                    if (yesterdayRecord != null)
+                    {
+                        endingStock = Math.Round(yesterdayRecord.Stock - yesterdayRecord.Used + yesterdayRecord.InventoryIncoming, 2);
+                    }
+
+                    // Create new record for today
+                    var newRecord = new InventoryTb
+                    {
+                        Name = itemName,
+                        DateToday = today,
+                        Stock = endingStock,
+                        Used = 0,
+                        InventoryIncoming = 0,
+                    };
+
+                    _context.InventoryTbs.Add(newRecord);
+                }
+            }
+
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                Console.WriteLine($"Error initializing daily inventory: {ex.Message}");
+            }
+        }
+
+        [HttpPost]
+        public IActionResult AddInventoryStock([FromBody] AddStockModel model)
+        {
+            try
+            {
+                var today = DateTime.Today;
+                var item = _context.InventoryTbs
+                    .FirstOrDefault(i => i.Name == model.Name && i.DateToday.Date == today);
+                    
+                if (item != null)
+                {
+                    item.InventoryIncoming += model.AdditionalStock;
+                    _context.SaveChanges();
+                    return Json(new { success = true });
+                }
+                return Json(new { success = false, message = "Item not found" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        public class AddStockModel
+        {
+            public string Name { get; set; }
+            public decimal AdditionalStock { get; set; }
+        }
+
+        [HttpGet]
+        public IActionResult GetInventoryHistoryByDate(string date)
+        {
+            try
+            {
+                // Parse the date string to DateTime
+                if (!DateTime.TryParse(date, out DateTime selectedDate))
+                {
+                    return Json(new { success = false, message = "Invalid date format" });
+                }
+
+                // Get inventory data for the selected date
+                var inventoryData = _context.InventoryTbs
+                    .Where(inv => inv.DateToday.Date == selectedDate.Date)
+                    .Select(inv => new
+                    {
+                        name = inv.Name,
+                        startingStock = Math.Round(inv.Stock, 2),
+                        used = Math.Round(inv.Used, 2),
+                        incoming = Math.Round(inv.InventoryIncoming, 2),
+                        endStock = Math.Round(inv.Stock - inv.Used + inv.InventoryIncoming, 2),
+                        measurement = inv.Measurement
+                    })
+                    .ToList();
+
+                if (!inventoryData.Any())
+                {
+                    return Json(new { success = false, message = "No data found for selected date." });
+                }
+
+                return Json(new { success = true, data = inventoryData });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        public class AddNewInventoryItemModel
+        {
+            public string Name { get; set; }
+            public decimal Stock { get; set; }
+            public string Measurement { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult AddNewInventoryItem([FromBody] AddNewInventoryItemModel model)
+        {
+            try
+            {
+                // Check if item already exists for today
+                var today = DateTime.Today;
+                var existingItem = _context.InventoryTbs
+                    .FirstOrDefault(i => i.Name == model.Name && i.DateToday.Date == today);
+
+                if (existingItem != null)
+                {
+                    return Json(new { success = false, message = "Item already exists for today" });
+                }
+
+                // Create new inventory item
+                var newItem = new InventoryTb
+                {
+                    Name = model.Name,
+                    Stock = model.Stock,
+                    Used = 0,
+                    InventoryIncoming = 0,
+                    DateToday = today,
+                    Measurement = model.Measurement
+                };
+
+                _context.InventoryTbs.Add(newItem);
+                _context.SaveChanges();
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        public class UpdateInventoryItemModel
+        {
+            public string OriginalName { get; set; }
+            public string NewName { get; set; }
+            public decimal Stock { get; set; }
+            public decimal Used { get; set; }
+            public decimal Incoming { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult UpdateInventoryItem([FromBody] UpdateInventoryItemModel model)
+        {
+            try
+            {
+                var today = DateTime.Today;
+                var item = _context.InventoryTbs
+                    .FirstOrDefault(i => i.Name == model.OriginalName && i.DateToday.Date == today);
+                    
+                if (item != null)
+                {
+                    item.Name = model.NewName;
+                    item.Stock = model.Stock;
+                    item.Used = model.Used;
+                    item.InventoryIncoming = model.Incoming;
+                    
+                    _context.SaveChanges();
+                    return Json(new { success = true });
+                }
+                return Json(new { success = false, message = "Item not found" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        public IActionResult ExportInventorySingleDate(string date)
+        {
+            try
+            {
+                if (!DateTime.TryParse(date, out DateTime selectedDate))
+                {
+                    return BadRequest("Invalid date format");
+                }
+
+                // Define the ordered list of items
+                var orderedItemNames = new[]
+                {
+                    "Coffee",
+                    "Matcha",
+                    "Milk",
+                    "Condensed",
+                    "Caramel",
+                    "Hazelnut Syrup",
+                    "Vanilla",
+                    "White Chocolate Syrup",
+                    "Chocolate Syrup",
+                    "Yogurt Syrup",
+                    "Strawberry Syrup",
+                    "Chocolate Sauce",
+                    "Caramel Sauce",
+                    "White Chocolate Bar",
+                    "Chocolate Bar",
+                    "Cinnamon",
+                    "Honey",
+                    "Whipped Cream",
+                    "Strawberry Jam",
+                    "Mango Jam",
+                    "BlueBerry Jam",
+                    "12oz Cups",
+                    "16oz Cups",
+                    "22oz Cups",
+                    "Ice",
+                    "Water"
+                };
+
+                // Get inventory data
+                var inventoryData = _context.InventoryTbs
+                    .Where(inv => inv.DateToday.Date == selectedDate.Date)
+                    .ToDictionary(inv => inv.Name);
+
+                using (var workbook = new XLWorkbook())
+                {
+                    var worksheet = workbook.Worksheets.Add($"Inventory {selectedDate:yyyy-MM-dd}");
+
+                    // Add headers
+                    var headers = new[] { 
+                        "Item Name", 
+                        "Inventory", 
+                        "Outbound Delivery", 
+                        "Damage",
+                        "Total",
+                        "Inbound Delivery",
+                        "Returns",
+                        "Stocks on Hand"
+                    };
+                    for (int i = 0; i < headers.Length; i++)
+                    {
+                        worksheet.Cell(1, i + 1).Value = headers[i];
+                        worksheet.Cell(1, i + 1).Style.Font.Bold = true;
+                    }
+
+                    // Add data in specified order
+                    int row = 2;
+                    foreach (var itemName in orderedItemNames)
+                    {
+                        if (inventoryData.TryGetValue(itemName, out var item))
+                        {
+                            // Column positions (using 1-based indexing)
+                            int inventoryCol = 2;
+                            int outboundCol = 3;
+                            int damageCol = 4;
+                            int totalCol = 5;
+                            int inboundCol = 6;
+                            int returnsCol = 7;
+                            int stocksOnHandCol = 8;
+
+                            // Set values
+                            worksheet.Cell(row, 1).Value = item.Name;
+                            worksheet.Cell(row, inventoryCol).Value = item.Stock;
+                            worksheet.Cell(row, outboundCol).Value = item.Used;
+                            worksheet.Cell(row, damageCol).Value = ""; // Empty for damage
+                            worksheet.Cell(row, inboundCol).Value = item.InventoryIncoming;
+                            worksheet.Cell(row, returnsCol).Value = ""; // Empty for returns
+                            
+                            // Set formulas
+                            var totalCell = worksheet.Cell(row, totalCol);
+                            totalCell.FormulaA1 = $"=B{row}-C{row}"; // Total = Inventory - Outbound
+                            
+                            var stocksOnHandCell = worksheet.Cell(row, stocksOnHandCol);
+                            stocksOnHandCell.FormulaA1 = $"=E{row}+F{row}"; // Stocks on Hand = Total + Inbound
+
+                            row++;
+                        }
+                    }
+
+                    // Style the table
+                    var tableRange = worksheet.Range(1, 1, row - 1, 8);
+                    tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    
+                    // Format number columns to show 2 decimal places
+                    worksheet.Range(2, 2, row - 1, 8).Style.NumberFormat.NumberFormatId = 2;
+
+                    using (var stream = new MemoryStream())
+                    {
+                        workbook.SaveAs(stream);
+                        stream.Position = 0;
+
+                        return File(
+                            stream.ToArray(),
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            $"Inventory_{selectedDate:yyyy-MM-dd}.xlsx"
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        public IActionResult ExportInventoryDateRange(string startDate, string endDate)
+        {
+            try
+            {
+                if (!DateTime.TryParse(startDate, out DateTime start) || 
+                    !DateTime.TryParse(endDate, out DateTime end))
+                {
+                    return BadRequest("Invalid date format");
+                }
+
+                // Define the ordered list of items
+                var orderedItemNames = new[]
+                {
+                    "Coffee",
+                    "Matcha",
+                    "Milk",
+                    "Condensed",
+                    "Caramel",
+                    "Hazelnut Syrup",
+                    "Vanilla",
+                    "White Chocolate Syrup",
+                    "Chocolate Syrup",
+                    "Yogurt Syrup",
+                    "Strawberry Syrup",
+                    "Chocolate Sauce",
+                    "Caramel Sauce",
+                    "White Chocolate Bar",
+                    "Chocolate Bar",
+                    "Cinnamon",
+                    "Honey",
+                    "Whipped Cream",
+                    "Strawberry Jam",
+                    "Mango Jam",
+                    "BlueBerry Jam",
+                    "12oz Cups",
+                    "16oz Cups",
+                    "22oz Cups",
+                    "Ice",
+                    "Water"
+                };
+
+                using (var workbook = new XLWorkbook())
+                {
+                    for (DateTime date = start.Date; date <= end.Date; date = date.AddDays(1))
+                    {
+                        var inventoryData = _context.InventoryTbs
+                            .Where(inv => inv.DateToday.Date == date.Date)
+                            .ToDictionary(inv => inv.Name);
+
+                        if (inventoryData.Any())
+                        {
+                            var worksheet = workbook.Worksheets.Add($"{date:yyyy-MM-dd}");
+
+                            // Add headers
+                            var headers = new[] { 
+                                "Item Name", 
+                                "Inventory", 
+                                "Outbound Delivery", 
+                                "Damage",
+                                "Total",
+                                "Inbound Delivery",
+                                "Returns",
+                                "Stocks on Hand"
+                            };
+                            for (int i = 0; i < headers.Length; i++)
+                            {
+                                worksheet.Cell(1, i + 1).Value = headers[i];
+                                worksheet.Cell(1, i + 1).Style.Font.Bold = true;
+                            }
+
+                            // Add data in specified order
+                            int row = 2;
+                            foreach (var itemName in orderedItemNames)
+                            {
+                                if (inventoryData.TryGetValue(itemName, out var item))
+                                {
+                                    // Column positions (using 1-based indexing)
+                                    int inventoryCol = 2;
+                                    int outboundCol = 3;
+                                    int damageCol = 4;
+                                    int totalCol = 5;
+                                    int inboundCol = 6;
+                                    int returnsCol = 7;
+                                    int stocksOnHandCol = 8;
+
+                                    // Set values
+                                    worksheet.Cell(row, 1).Value = item.Name;
+                                    worksheet.Cell(row, inventoryCol).Value = item.Stock;
+                                    worksheet.Cell(row, outboundCol).Value = item.Used;
+                                    worksheet.Cell(row, damageCol).Value = ""; // Empty for damage
+                                    worksheet.Cell(row, inboundCol).Value = item.InventoryIncoming;
+                                    worksheet.Cell(row, returnsCol).Value = ""; // Empty for returns
+                                    
+                                    // Set formulas
+                                    var totalCell = worksheet.Cell(row, totalCol);
+                                    totalCell.FormulaA1 = $"=B{row}-C{row}"; // Total = Inventory - Outbound
+                                    
+                                    var stocksOnHandCell = worksheet.Cell(row, stocksOnHandCol);
+                                    stocksOnHandCell.FormulaA1 = $"=E{row}+F{row}"; // Stocks on Hand = Total + Inbound
+
+                                    row++;
+                                }
+                            }
+
+                            // Style the table
+                            var tableRange = worksheet.Range(1, 1, row - 1, 8);
+                            tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                            tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                            
+                            // Format number columns to show 2 decimal places
+                            worksheet.Range(2, 2, row - 1, 8).Style.NumberFormat.NumberFormatId = 2;
+                        }
+                    }
+
+                    using (var stream = new MemoryStream())
+                    {
+                        workbook.SaveAs(stream);
+                        stream.Position = 0;
+
+                        return File(
+                            stream.ToArray(),
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            $"Inventory_{start:yyyy-MM-dd}_to_{end:yyyy-MM-dd}.xlsx"
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

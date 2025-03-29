@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using NocturnalBrews;
+using NocturnalBrews.Controllers;
+using NocturnalBrews.Services;
 
 namespace NocturnalBrews
 {
@@ -16,6 +18,11 @@ namespace NocturnalBrews
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+                })
+                .ConfigureServices((context, services) =>
+                {
+                    services.AddScoped<HomeController>();
+                    services.AddHostedService<DailyInventoryInitializationService>();
                 });
     }
 }
